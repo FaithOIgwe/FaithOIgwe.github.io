@@ -58,20 +58,20 @@ html{scroll-behavior:smooth}
 <!-- CASE STUDIES -->
 <section id="work" style="border-top: 1px solid #10140F">
 <div style="max-width: 1180px; margin: 0 auto; padding: 72px 28px 24px">
-<h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 600; font-size: clamp(34px, 4.2vw, 56px); line-height: 1.05; letter-spacing: -0.03em; max-width: 820px">Seven problems across payments, lending, healthcare and client work.</h2>
-<p style="margin: 20px 0 0; max-width: 640px; color: #4A5049">Client and employer data stays private, so these describe the reasoning and the result. I'm happy to go deeper in an interview.</p>
+<h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-weight: 600; font-size: clamp(34px, 4.2vw, 56px); line-height: 1.05; letter-spacing: -0.03em; max-width: 820px">Seven pieces of work across payments, healthcare, client projects and open source.</h2>
+<p style="margin: 20px 0 0; max-width: 640px; color: #4A5049">Employer and client specifics are left out on purpose. These show how I work and what it produced.</p>
 </div>
 
 <!-- CASE 01 -->
 <article style="max-width: 1180px; margin: 0 auto; padding: 56px 28px; display: flex; flex-wrap: wrap; gap: 32px 56px; border-top: 1px solid #CFD4CC">
 <div style="flex: 1 1 180px; min-width: 0">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">01</div>
-<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Interswitch Group<br>Payments<br>2023 – 2026</div>
+<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Payments<br>Data quality<br>and reporting</div>
 </div>
 <div style="flex: 999 1 560px; min-width: 0">
 <h3 style="margin: 0 0 20px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: clamp(26px, 3vw, 38px); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em">Making payments reporting trustworthy at 200M+ rows a month</h3>
-<p style="margin: 0 0 16px; max-width: 680px"><strong>The problem.</strong> Source systems and reports didn't agree. Two teams could pull "total transactions" and get two answers, and a lot of reporting still depended on someone doing it by hand.</p>
-<p style="margin: 0 0 32px; max-width: 680px"><strong>What I did.</strong> Reconciled source systems against the reports built on them, tightened the validation rules and rewrote the reporting logic that was wrong. Rebuilt the models as star schemas with incremental refresh, automated the recurring reports, and helped move reporting onto Azure and Microsoft Fabric.</p>
+<p style="margin: 0 0 16px; max-width: 680px"><strong>The goal.</strong> One set of numbers every team could rely on at high volume, with far less of the reporting done by hand.</p>
+<p style="margin: 0 0 32px; max-width: 680px"><strong>What I did.</strong> Reconciled source systems against the reports built on them, tightened the validation rules and corrected reporting logic. Rebuilt the models as star schemas with incremental refresh, automated the recurring reports, and helped move reporting onto Azure and Microsoft Fabric.</p>
 
 <div style="border-top: 2px solid #10140F; max-width: 760px">
 <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 28px; padding: 16px 0; border-bottom: 1px solid #CFD4CC">
@@ -99,16 +99,16 @@ html{scroll-behavior:smooth}
 <article style="max-width: 1180px; margin: 0 auto; padding: 56px 28px; display: flex; flex-wrap: wrap; gap: 32px 56px; border-top: 1px solid #CFD4CC">
 <div style="flex: 1 1 180px; min-width: 0">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">02</div>
-<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Migo<br>Growth · Funnel analytics<br>Shipped</div>
+<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Method<br>Funnel analytics</div>
 </div>
 <div style="flex: 999 1 560px; min-width: 0">
 <h3 style="margin: 0 0 20px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: clamp(26px, 3vw, 38px); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em">An app-to-loan funnel that counts each person once</h3>
-<p style="margin: 0 0 16px; max-width: 680px"><strong>The problem.</strong> The monthly funnel was built by adding up daily distinct users. Anyone who came back on a second day was counted twice, so the monthly numbers ran high and couldn't be compared.</p>
-<p style="margin: 0 0 28px; max-width: 680px"><strong>What I did.</strong> Added a monthly view computed at month grain, investigated a sudden jump in applicant-to-offer conversion, and set up separate conversion alerts for new and repeat borrowers, so Growth hears about a shift before the weekly meeting does.</p>
+<p style="margin: 0 0 16px; max-width: 680px"><strong>The trap.</strong> Monthly funnels are often built by adding up daily distinct users. Anyone who comes back on a second day gets counted twice, so the monthly numbers run high and can't be compared.</p>
+<p style="margin: 0 0 28px; max-width: 680px"><strong>What I do.</strong> Compute every stage at the grain being reported, test that the totals tie back to the source, and alert on conversion separately for new and returning customers, so a shift is noticed before the weekly meeting.</p>
 
 <div style="display: flex; flex-wrap: wrap; gap: 24px 32px; align-items: stretch">
 <figure style="flex: 1 1 280px; min-width: 0; margin: 0; padding: 22px 24px; border: 1px solid #10140F; background: #FFFFFF">
-<figcaption style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #4A5049; margin-bottom: 14px">The bug in one picture (made-up data)</figcaption>
+<figcaption style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 12px; color: #4A5049; margin-bottom: 14px">The trap in one picture (made-up data)</figcaption>
 <div style="overflow-x: auto">
 <table style="border-collapse: collapse; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; width: 100%">
 <thead>
@@ -144,7 +144,7 @@ html{scroll-behavior:smooth}
 <div style="white-space: pre">from app_events group by 1;</div>
 </figure>
 </div>
-<p style="margin: 20px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Snowflake · SQL · Sigma · Alerting</p>
+<p style="margin: 20px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">SQL · dbt tests · Alerting</p>
 </div>
 </article>
 
@@ -153,7 +153,7 @@ html{scroll-behavior:smooth}
 <article style="padding: 56px 0">
 <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">03</div>
-<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Ducit Blue Solutions · Healthcare · 2023</div>
+<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Healthcare · 2023</div>
 </div>
 <h3 style="margin: 20px 0 16px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em">A monthly performance report a hospital could run on</h3>
 <p style="margin: 0 0 14px">A hospital client had patient and service data but no regular, consistent view of how it was performing or who it was treating.</p>
@@ -176,23 +176,23 @@ html{scroll-behavior:smooth}
 <article style="max-width: 1180px; margin: 0 auto; padding: 56px 28px; display: flex; flex-wrap: wrap; gap: 32px 56px; border-top: 1px solid #CFD4CC">
 <div style="flex: 1 1 180px; min-width: 0">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">05</div>
-<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Migo<br>Lending · Metric design<br>Shipped</div>
+<div style="margin-top: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #4A5049">Method<br>Metric design</div>
 </div>
 <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-wrap: wrap; gap: 28px 40px">
 <div style="flex: 999 1 340px; min-width: 0">
-<h3 style="margin: 0 0 20px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: clamp(26px, 3vw, 38px); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em">One definition of "Direct Debit adoption"</h3>
-<p style="margin: 0 0 16px"><strong>The problem.</strong> The same phrase covered two different things: loans where Direct Debit was <em>required</em> at application, and loans where it was <em>actually set up</em>. Nobody could say cleanly whether it was working.</p>
-<p style="margin: 0 0 16px"><strong>What I did.</strong> Wrote each measure down explicitly, separated first-time from repeat borrowers, and segmented first-timers by eligibility and whether a credit score existed, so each kind of offer is compared like for like.</p>
-<p style="margin: 0"><strong>The point.</strong> One agreed number to judge Direct Debit by, instead of a debate about whose figure is right.</p>
+<h3 style="margin: 0 0 20px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: clamp(26px, 3vw, 38px); font-weight: 600; line-height: 1.12; letter-spacing: -0.02em">One definition before any dashboard</h3>
+<p style="margin: 0 0 16px"><strong>The trap.</strong> "Adoption" of a feature can mean customers who were <em>offered</em> it or customers who <em>actually set it up</em>. When one word covers both, nobody can say cleanly whether the feature is working.</p>
+<p style="margin: 0 0 16px"><strong>What I do.</strong> Write each measure down explicitly, separate new from returning customers, and segment by eligibility, so like is compared with like.</p>
+<p style="margin: 0"><strong>The point.</strong> One agreed number to judge the feature by, instead of a debate about whose figure is right.</p>
 </div>
 <figure style="flex: 1 1 280px; min-width: 0; margin: 0; align-self: flex-start; padding: 22px 24px; border: 1px solid #10140F; background: #FFFFFF; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; line-height: 1.85">
 <figcaption style="font-size: 12px; color: #4A5049; margin-bottom: 12px">What I write before any SQL</figcaption>
-<div><span style="color: #0B5D3B">metric:</span> dd_adoption_rate</div>
-<div><span style="color: #0B5D3B">grain:</span> one row per disbursed loan</div>
-<div><span style="color: #0B5D3B">counts:</span> loans with DD set up</div>
-<div><span style="color: #0B5D3B">excludes:</span> DD only required</div>
+<div><span style="color: #0B5D3B">metric:</span> feature_adoption_rate</div>
+<div><span style="color: #0B5D3B">grain:</span> one row per customer</div>
+<div><span style="color: #0B5D3B">counts:</span> customers who finished setup</div>
+<div><span style="color: #0B5D3B">excludes:</span> customers only offered it</div>
 <div><span style="color: #0B5D3B">split by:</span> new, repeat</div>
-<div><span style="color: #0B5D3B">check:</span> ties to disbursement totals</div>
+<div><span style="color: #0B5D3B">check:</span> ties to the customer total</div>
 </figure>
 </div>
 </article>
@@ -202,22 +202,22 @@ html{scroll-behavior:smooth}
 <article style="padding: 56px 0">
 <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">06</div>
-<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Interswitch · Platform migration</div>
+<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Payments · Platform migration</div>
 </div>
 <h3 style="margin: 20px 0 16px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em">Moving payments reporting onto Azure and Fabric</h3>
-<p style="margin: 0 0 14px">Reporting had outgrown its setup: large Power BI reports were slow to refresh and too much ran on manual steps.</p>
+<p style="margin: 0 0 14px">The aim was reporting that stayed fast as transaction volume grew, with fewer manual steps.</p>
 <p style="margin: 0 0 14px">I owned part of the migration of reporting workflows to Azure and Microsoft Fabric, using Power BI APIs and SQL-based processing, and rebuilt heavy reports on star-schema models with incremental refresh so they stayed fast as volume grew.</p>
 <p style="margin: 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Azure · Microsoft Fabric · Power BI APIs · SQL</p>
 </article>
 <article style="padding: 56px 0">
 <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px">
 <div style="font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.04em">07</div>
-<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Migo · Credit risk · Investigation</div>
+<div style="font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Open source · Analytics engineering</div>
 </div>
-<h3 style="margin: 20px 0 16px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em">Sizing the damage from a credit-model bug</h3>
-<p style="margin: 0 0 14px">A scoring bug ran for months before it was fixed. The business needed to know what it had changed and who it had touched.</p>
-<p style="margin: 0">I built before-and-after monitoring of average offer size and offer-to-loan conversion, then traced the model's inference records to find the borrowers affected. "The model was off" became a named list Growth could go back to.</p>
-<p style="margin: 14px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">Snowflake · SQL · JSON event data</p>
+<h3 style="margin: 20px 0 16px; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em">A brokerage data platform, built in the open</h3>
+<p style="margin: 0 0 14px">Trade_ledger_analytics is a project anyone can read: messy trading data with duplicates, late fills and reversals, modelled in dbt with enforced contracts, freshness checks and tests that tie every trade to its cash settlement.</p>
+<p style="margin: 0">A reporting layer answers three business questions with written metric definitions, and every push is built and tested automatically. <a href="https://github.com/FaithOIgwe/Trade_ledger_analytics" style="font-weight: 600; text-underline-offset: 4px">Read the code on GitHub</a></p>
+<p style="margin: 14px 0 0; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 13px; color: #4A5049">dbt · Postgres · Airflow · Iceberg · ClickHouse · GitHub Actions</p>
 </article>
 </div>
 
@@ -225,7 +225,6 @@ html{scroll-behavior:smooth}
 <div style="max-width: 1180px; margin: 0 auto; padding: 40px 28px 88px; border-top: 1px solid #CFD4CC; display: flex; flex-wrap: wrap; gap: 20px 56px">
 <div style="flex: 1 1 180px; min-width: 0; font-family: 'Bricolage Grotesque', 'Arial Narrow', sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -0.015em">In public</div>
 <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; max-width: 720px">
-<p style="margin: 0"><a href="https://github.com/FaithOIgwe" style="font-weight: 600; text-underline-offset: 4px">Trade_ledger_analytics on GitHub</a>. An analytics engineering project I'm building in the open, so you can read the models and tests, not just hear about them.</p>
 <p style="margin: 0"><strong>The 5-Minute Rule.</strong> My entry for FP20 Analytics Challenge 42, on an AI-agent customer-support dataset, built twice: once in Power BI and once in Tableau.</p>
 </div>
 </div>
@@ -260,7 +259,7 @@ html{scroll-behavior:smooth}
 <li>Analytics partner to Growth, Marketing, Risk, Lending Ops and Data Science, writing SQL in Snowflake across the whole borrower journey, from offer and eligibility to disbursement.</li>
 <li>Build borrower-level and monthly portfolio metrics: credit limits, principal outstanding, utilisation and probability-of-default scores.</li>
 <li>Migrated deprecated Sigma datasets to data models, mapping every downstream dependency first.</li>
-<li>Created the single definition of Direct Debit adoption, plus conversion alerts and before-and-after monitoring for a credit-model fix.</li>
+<li>Define metrics with stakeholders and build funnel views and conversion alerts on top of them.</li>
 </ul>
 </div>
 </div>

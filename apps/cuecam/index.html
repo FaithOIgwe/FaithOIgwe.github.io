@@ -131,6 +131,9 @@
   .prow small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
   .prow input[type=range]{width:50%;accent-color:var(--accent2)}
   .prow .seg button{padding:7px 9px}
+  #fname{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;letter-spacing:-.01em;
+    text-shadow:0 2px 18px rgba(0,0,0,.6);pointer-events:none;opacity:0;transition:opacity .25s}
+  #fname.show{opacity:1}
   .panelHead{display:flex;justify-content:space-between;align-items:center}
   .panelHead button{font-weight:600;padding:6px 4px;color:var(--accent2)}
 
@@ -207,6 +210,7 @@
   <canvas id="fx" class="hidden"></canvas>
   <div id="grid" class="hidden"></div>
   <div id="ring" class="hidden"></div>
+  <div id="fname"></div>
 
   <div id="prompter">
     <div class="shade" id="shade"></div>
@@ -230,6 +234,9 @@
   <div id="panel" class="hidden">
     <div class="panelHead"><h3>Look</h3><button id="panelDone">Done</button></div>
     <div class="looks" id="lookList"></div>
+    <h3 style="margin-top:14px">Filter</h3>
+    <div class="looks" id="filterList"></div>
+    <div class="prow"><div><label>Filter strength</label><small>Tip: swipe left or right on the camera to change filters</small></div><input type="range" id="fstr" min="0" max="100" step="1"></div>
     <h3 style="margin-top:14px">Adjust</h3>
     <div class="prow"><div><label>Background blur</label><small>Soft focus behind you</small></div>
       <div class="seg" id="blurSeg"><button data-v="off">Off</button><button data-v="soft">Soft</button><button data-v="strong">Strong</button></div></div>
@@ -299,6 +306,8 @@
     warm: store.get('warm', 6),
     smooth: store.get('smooth', 25),
     ratio: store.get('ratio', 'full'),
+    filter: store.get('filter', 'none'),
+    fstr: store.get('fstr', 80),
     grid: store.get('grid', false),
     ring: store.get('ring', false),
   };
@@ -599,7 +608,7 @@
 
   const look = () => LOOKS[S.look] || LOOKS.natural;
   const needSeg = () => S.blur !== 'off' || S.smooth > 0;
-  const needFx = () => S.look !== 'natural' || needSeg() || S.bright !== 0 || S.warm !== 0 || S.ratio !== 'full';
+  const needFx = () => S.filter !== 'none' || S.look !== 'natural' || needSeg() || S.bright !== 0 || S.warm !== 0 || S.ratio !== 'full';
 
   function crop(vw, vh){
     if (S.ratio === 'full') return [0, 0, vw, vh];
@@ -710,6 +719,8 @@
       }
       fxX.fillStyle = vigCache.g; fxX.fillRect(0, 0, W, H);
     }
+    applyFilter(W, H);
+    fxX.globalCompositeOperation = 'source-over'; fxX.globalAlpha = 1;
   }
 
   function fxTick(){
@@ -751,7 +762,7 @@
   }
 
   function updateFx(){
-    $('#lookName').textContent = look().name + (isCustom() ? ' (edited)' : '');
+    $('#lookName').textContent = look().name + (isCustom() ? ' (edited)' : '') + (S.filter !== 'none' ? ' · ' + FILTERS[S.filter].name : '');
     $('#grid').classList.toggle('hidden', !S.grid);
     $('#ring').classList.toggle('hidden', !S.ring);
     const on = needFx();
@@ -764,10 +775,102 @@
   }
   const isCustom = () => { const L = look(); return L.blur !== S.blur || L.bright !== S.bright || L.warm !== S.warm || L.smooth !== S.smooth; };
 
+  // ---------- Filters (swipe to change, like Snapchat) ----------
+  const FILTERS = {
+    none:    { name: 'No filter' },
+    glow:    { name: 'Glow',       bloom: .6,  lift: .07, tint: '255,190,160', tintA: .1 },
+    blush:   { name: 'Blush',      bloom: .3,  tint: '255,110,150', tintA: .32 },
+    peach:   { name: 'Peach',      bloom: .15, tint: '255,165,115', tintA: .28, fade: .06 },
+    clean:   { name: 'Clean girl', bloom: .3,  lift: .11, tint: '255,200,170', tintA: .16 },
+    honey:   { name: 'Honey',      bloom: .12, tint: '255,185,70',  tintA: .3 },
+    dreamy:  { name: 'Dreamy',     bloom: .5,  tint: '200,170,255', tintA: .14, fade: .1 },
+    y2k:     { name: 'Y2K',        bloom: .2,  tint: '175,110,255', tintA: .28 },
+    film:    { name: 'Film',       tint: '255,190,120', tintA: .14, fade: .12, grain: .18 },
+    sparkle: { name: 'Sparkle',    bloom: .35, lift: .05, sparkle: true },
+  };
+  const FKEYS = Object.keys(FILTERS);
+  const [b1, b1X] = mk(), [b2, b2X] = mk(), [spk, spkX] = mk();
+  let noisePat = null;
+  const sparks = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: .008 + Math.random() * .02, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6, dy: .0004 + Math.random() * .0008, gold: Math.random() < .4 }));
+  function star(x, cx, cy, r){
+    x.beginPath();
+    x.moveTo(cx, cy - r); x.quadraticCurveTo(cx, cy, cx + r, cy); x.quadraticCurveTo(cx, cy, cx, cy + r);
+    x.quadraticCurveTo(cx, cy, cx - r, cy); x.quadraticCurveTo(cx, cy, cx, cy - r); x.fill();
+  }
+  function applyFilter(W, H){
+    const F = FILTERS[S.filter]; if (!F || S.filter === 'none') return;
+    const k = S.fstr / 100; if (k <= 0) return;
+    fxX.globalAlpha = 1;
+    if (F.bloom){
+      const w4 = Math.max(2, Math.round(W / 4)), h4 = Math.max(2, Math.round(H / 4)), w16 = Math.max(2, Math.round(W / 16)), h16 = Math.max(2, Math.round(H / 16));
+      if (b1.width !== w4 || b1.height !== h4){ b1.width = w4; b1.height = h4; }
+      if (b2.width !== w16 || b2.height !== h16){ b2.width = w16; b2.height = h16; }
+      b1X.imageSmoothingQuality = b2X.imageSmoothingQuality = 'high';
+      b1X.drawImage(fxC, 0, 0, w4, h4); b2X.drawImage(b1, 0, 0, w16, h16); b1X.drawImage(b2, 0, 0, w4, h4);
+      fxX.globalCompositeOperation = 'screen'; fxX.globalAlpha = F.bloom * k;
+      fxX.drawImage(b1, 0, 0, W, H); fxX.globalAlpha = 1;
+    }
+    if (F.lift){ fxX.globalCompositeOperation = 'screen'; fxX.fillStyle = `rgba(255,255,255,${F.lift * k})`; fxX.fillRect(0, 0, W, H); }
+    if (F.tint){ fxX.globalCompositeOperation = 'soft-light'; fxX.fillStyle = `rgba(${F.tint},${F.tintA * k * 1.6})`; fxX.fillRect(0, 0, W, H); }
+    if (F.fade){ const v = Math.round(255 * F.fade * k); fxX.globalCompositeOperation = 'lighten'; fxX.fillStyle = `rgb(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8})`; fxX.fillRect(0, 0, W, H); }
+    if (F.grain){
+      if (!noisePat){
+        const [n, nX] = mk(); n.width = n.height = 160; const id = nX.createImageData(160, 160);
+        for (let i = 0; i < id.data.length; i += 4){ const v = 128 + (Math.random() - .5) * 200; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+        nX.putImageData(id, 0, 0); noisePat = fxX.createPattern(n, 'repeat');
+      }
+      fxX.save(); fxX.globalCompositeOperation = 'overlay'; fxX.globalAlpha = F.grain * k;
+      fxX.translate(Math.random() * 160, Math.random() * 160); fxX.fillStyle = noisePat; fxX.fillRect(-160, -160, W + 320, H + 320); fxX.restore();
+    }
+    if (F.sparkle){
+      if (spk.width !== W || spk.height !== H){ spk.width = W; spk.height = H; }
+      spkX.globalCompositeOperation = 'source-over'; spkX.clearRect(0, 0, W, H);
+      const t = performance.now() / 1000, m = Math.min(W, H);
+      for (const p of sparks){
+        p.y -= p.dy; if (p.y < -.05){ p.y = 1.05; p.x = Math.random(); }
+        const a = Math.max(0, Math.sin(t * p.sp + p.ph)) * k;
+        if (a < .05) continue;
+        const cx = p.x * W, cy = p.y * H, r = p.r * m * (.6 + .4 * a);
+        spkX.globalAlpha = a * .55; spkX.fillStyle = p.gold ? '#ffd9a0' : '#ffffff';
+        spkX.beginPath(); spkX.arc(cx, cy, r * .9, 0, 6.29); spkX.fill();
+        spkX.globalAlpha = a; star(spkX, cx, cy, r * 1.8);
+      }
+      spkX.globalAlpha = 1;
+      if (maskReady && needSeg()){ spkX.globalCompositeOperation = 'destination-out'; spkX.drawImage(maskReady, 0, 0, W, H); spkX.globalCompositeOperation = 'source-over'; }
+      fxX.globalCompositeOperation = 'screen'; fxX.drawImage(spk, 0, 0);
+    }
+    fxX.globalCompositeOperation = 'source-over'; fxX.globalAlpha = 1;
+  }
+  function setFilter(key, announce){
+    S.filter = key; save(); paintPanel(); updateFx();
+    if (announce){ const f = $('#fname'); f.textContent = FILTERS[key].name; f.classList.add('show'); clearTimeout(setFilter._t); setFilter._t = setTimeout(() => f.classList.remove('show'), 900); }
+  }
+  FKEYS.forEach(k => {
+    const b = document.createElement('button'); b.textContent = FILTERS[k].name; b.dataset.v = k;
+    b.onclick = () => setFilter(k, false);
+    $('#filterList').appendChild(b);
+  });
+  $('#fstr').addEventListener('input', e => { S.fstr = +e.target.value; save(); });
+  // swipe on the camera picture to change filter
+  let swX = null, swY = null;
+  $('#studio').addEventListener('pointerdown', e => {
+    if (recording || e.target.closest('#prompter, button, input, #panel, .chip, .controls, #camRow, .topbar')) { swX = null; return; }
+    swX = e.clientX; swY = e.clientY;
+  });
+  $('#studio').addEventListener('pointerup', e => {
+    if (swX === null) return;
+    const dx = e.clientX - swX, dy = e.clientY - swY; swX = null;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > 60) return;
+    const i = FKEYS.indexOf(S.filter), n = FKEYS.length;
+    setFilter(FKEYS[(i + (dx < 0 ? 1 : -1) + n) % n], true);
+  });
+
   // Look panel
   const paintSeg = (id, key) => $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === String(S[key])));
   function paintPanel(){
     $('#lookList').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === S.look));
+    $('#filterList').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === S.filter));
+    $('#fstr').value = S.fstr;
     paintSeg('#blurSeg', 'blur'); paintSeg('#ratioSeg', 'ratio');
     $('#bright').value = S.bright; $('#warm').value = S.warm; $('#smooth').value = S.smooth;
     $('#gridSw').classList.toggle('on', S.grid); $('#ringSw').classList.toggle('on', S.ring);

@@ -16,8 +16,12 @@ const fmtDate=k=>new Date(k+'T12:00').toLocaleDateString('en-GB',{day:'numeric',
 
 /* ---------- SPEECH ---------- */
 const hasTTS='speechSynthesis' in window;let VOICE=null,playId=0;
-const pickVoice=()=>{try{const vs=speechSynthesis.getVoices();VOICE=vs.find(v=>/^fr[-_]FR/i.test(v.lang)&&/google|amélie|amelie|thomas|audrey|marie|denise|premium|enhanced/i.test(v.name))||vs.find(v=>/^fr[-_]FR/i.test(v.lang))||vs.find(v=>/^fr/i.test(v.lang))||null}catch(e){}};
-if(hasTTS){pickVoice();try{speechSynthesis.onvoiceschanged=pickVoice}catch(e){}}
+const voiceScore=v=>{const n=(v.name||'')+' '+(v.voiceURI||'');let sc=0;if(/^fr[-_]FR/i.test(v.lang))sc+=40;else if(/^fr/i.test(v.lang))sc+=20;else return -1;
+  if(/premium|enhanced|natural|neural|siri|online/i.test(n))sc+=50;else if(/google/i.test(n))sc+=30;
+  if(/compact|espeak/i.test(n))sc-=30;if(v.localService===false)sc+=5;return sc};
+const frVoices=()=>{try{return speechSynthesis.getVoices().filter(v=>voiceScore(v)>=0).sort((a,b)=>voiceScore(b)-voiceScore(a))}catch(e){return[]}};
+const pickVoice=()=>{const vs=frVoices();VOICE=vs.find(v=>v.voiceURI===S.voice)||vs[0]||null};
+if(hasTTS){pickVoice();try{speechSynthesis.onvoiceschanged=()=>{pickVoice();if(location.hash==='#sounds'&&!document.getElementById('vpick'))route()}}catch(e){}}
 /* Audio order: 1) a native speaker's clip recorded in the Voice studio, 2) a real speaker from Lingua Libre (words),
    3) the device's French voice as a fallback. Human clips are looked up in advance so playback starts inside the tap. */
 const CLIPS={};let CUR=null;
@@ -49,6 +53,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const playSeq=async(arr,rate)=>{const id=++playId;for(const t of arr){if(id!==playId)return;await say(t,rate);await sleep(350)}};
 const SPK='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
 const sb=(t,l)=>`<button class="say" data-say="${esc(t)}" aria-label="Listen: ${esc(l||t)}">${SPK}</button>`;
+const voicePicker=()=>{const vs=frVoices();if(!vs.length)return'';return`<h3>Backup voice</h3><p class="small">Used when no real recording exists yet. Your device's voices sound different on each phone and computer; pick the most natural one.</p><div class="row"><select id="vpick" aria-label="French voice">${vs.map(v=>`<option value="${esc(v.voiceURI)}" ${VOICE&&v.voiceURI===VOICE.voiceURI?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}</select><button class="sm" id="vtest">Test</button></div>`};
 const voiceNote=()=>hasTTS&&!VOICE?`<p class="note">No French voice was found on this device, so audio may sound English. Add one in your device settings (iPhone: Settings › Accessibility › Spoken Content › Voices › French; Android: Text-to-speech settings).</p>`:'';
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 
@@ -171,13 +176,13 @@ let PQ=null,PS=[0,0];
 function rSounds(){
   const groups=[...new Set(SND.map(s=>s[0]))];
   const newPair=()=>{const p=PAIRS[Math.floor(Math.random()*PAIRS.length)];PQ={p,a:Math.round(Math.random()),done:false}};if(!PQ)newPair();
-  INIT=()=>{const draw=()=>{$('#pq').innerHTML=`<p class="small mute">Sounds: ${esc(PQ.p[2])}</p><div class="row"><button class="pri" id="pplay">${SPK} Play the word</button></div><div class="row" style="margin-top:12px">${PQ.p.slice(0,2).map((w,i)=>`<button class="chip" data-pick="${i}" style="font-size:20px;padding:8px 24px" lang="fr">${esc(w)}</button>`).join('')}</div><p class="fb" id="pfb" aria-live="polite"></p><p class="small mute">Score ${PS[0]} / ${PS[1]}</p>`;
+  INIT=()=>{const vp=$('#vpick');if(vp){vp.onchange=()=>{S.voice=vp.value;save();pickVoice()};$('#vtest').onclick=()=>{playId++;stopAudio();credit(null);tts('Bonjour ! Je m\'appelle Claire et j\'apprends le français avec vous.',0,()=>{})}}const draw=()=>{$('#pq').innerHTML=`<p class="small mute">Sounds: ${esc(PQ.p[2])}</p><div class="row"><button class="pri" id="pplay">${SPK} Play the word</button></div><div class="row" style="margin-top:12px">${PQ.p.slice(0,2).map((w,i)=>`<button class="chip" data-pick="${i}" style="font-size:20px;padding:8px 24px" lang="fr">${esc(w)}</button>`).join('')}</div><p class="fb" id="pfb" aria-live="polite"></p><p class="small mute">Score ${PS[0]} / ${PS[1]}</p>`;
       $('#pplay').onclick=()=>{playId++;say(PQ.p[PQ.a],.85)};
       $$('[data-pick]').forEach(b=>b.onclick=()=>{if(PQ.done)return;PQ.done=true;PS[1]++;const ok=+b.dataset.pick===PQ.a;if(ok)PS[0]++;const f=$('#pfb');f.className='fb '+(ok?'ok':'bad');f.innerHTML=(ok?'Right: ':'It was: ')+esc(PQ.p[PQ.a])+` <button class="sm" id="pnext">Next pair</button>`;$('#pnext').onclick=()=>{newPair();draw()}})};draw()};
   return`<section class="band"><div class="wrap"><h1>Les sons du français</h1>
   <p>French has 16 vowel sounds, including four you won't find in English (u, eu, and the nasals). Tap a word to hear it, copy it three times, then test your ear below.</p><p class="small mute">Words play real speakers' recordings from Lingua Libre (CC BY-SA 4.0) where one exists, and sentences play our native speaker's recordings as they are added. The speaker's name appears at the bottom of the screen while it plays. Anything not recorded yet uses your device's French voice.</p>${voiceNote()}
   <div class="two"><div class="card"><h2 style="margin-top:0">Ear training: minimal pairs</h2><div id="pq"></div></div>
-  <div class="card"><h2 style="margin-top:0">Speed</h2><p class="small">Applies to all audio in the app.</p>${seg('rate',[['0.7','0.7×'],['0.85','0.85×'],['0.9','0.9×'],['1','1×']],String(S.rate))}</div></div>
+  <div class="card"><h2 style="margin-top:0">Speed</h2><p class="small">Applies to all audio in the app.</p>${seg('rate',[['0.7','0.7×'],['0.85','0.85×'],['0.9','0.9×'],['1','1×']],String(S.rate))}${voicePicker()}</div></div>
   ${groups.map(g=>`<h2>${g}</h2><div class="snd">${SND.filter(s=>s[0]===g).map(s=>`<div class="card"><div class="row" style="justify-content:space-between"><span class="ipa">/${esc(s[1])}/</span><span class="mute small">${esc(s[2])}</span></div><p class="small">${esc(s[3])}</p><div class="chips">${s[4].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div>`).join('')}</div>`).join('')}
   <h2>Linking, rhythm and melody</h2><div class="snd">${RULES.map(r=>`<div class="card"><h3>${esc(r[0])}</h3><p class="small">${esc(r[1])}</p><div class="chips">${r[2].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div>`).join('')}</div></div></section>`}
 

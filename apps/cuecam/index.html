@@ -599,7 +599,7 @@
   // ---------- Looks: blur, light, colour, frame ----------
   const LOOKS = {
     natural:  { name: 'Natural',        blur: 'off',    bright: 0,  warm: 0,  smooth: 0,  contrast: 1,    sat: 1,    vig: 0 },
-    glam:     { name: 'Glam',           blur: 'soft',   bright: 6,  warm: 5,  smooth: 65, tone: 55, slim: 35, eyes: 25, lips: 45, contrast: 1.06, sat: 1.08, vig: .18 },
+    glam:     { name: 'Glam',           blur: 'soft',   bright: 2,  warm: 0,  smooth: 85, tone: 75, slim: 50, eyes: 60, lips: 60, contrast: 1.03, sat: .97, vig: .12 },
     studio:   { name: 'Studio',         blur: 'soft',   bright: 6,  warm: 6,  smooth: 35, tone: 30, contrast: 1.08, sat: 1.06, vig: .22 },
     portrait: { name: 'Portrait',       blur: 'strong', bright: 4,  warm: 5,  smooth: 40, tone: 30, contrast: 1.06, sat: 1.05, vig: .3 },
     bright:   { name: 'Bright & clean', blur: 'soft',   bright: 14, warm: -2, smooth: 20, contrast: 1.02, sat: 1.04, vig: 0 },
@@ -761,7 +761,7 @@
   const [faceIn, faceInX] = mk();
   const [bm, bmX] = mk();   // beauty mask: R = face, G = lips, B = eyes/brows/mouth (keep sharp)
   const glc = document.createElement('canvas');
-  let gl = null, glProg = null, glTex = null, glMask = null, U = {}, glFailed = false;
+  let gl = null, glProg = null, glTex = null, U = {}, glFailed = false;
 
   const OVAL = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
   const LIPS_OUT = [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
@@ -799,57 +799,85 @@
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const avg = (...ids) => { let x = 0, y = 0; ids.forEach(i => { x += face.p[i * 2]; y += face.p[i * 2 + 1]; }); return [x / ids.length, y / ids.length]; };
 
+  // Two masks drawn from the face points:
+  //  bm  : R = face (slightly shrunk so hair never bleeds in), G = lips, B = keep sharp (eyes, brows, inner mouth)
+  //  bm2 : R = under-eye, G = brows, B = lash line
+  const [bm2, bm2X] = mk();
   function drawMask(W, H){
     const mw = Math.max(2, Math.round(W / 4)), mh = Math.max(2, Math.round(H / 4)), k = mw / W;
-    if (bm.width !== mw || bm.height !== mh){ bm.width = mw; bm.height = mh; }
-    bmX.globalCompositeOperation = 'source-over'; bmX.filter = 'none';
-    bmX.fillStyle = '#000'; bmX.fillRect(0, 0, mw, mh);
+    [[bm, bmX], [bm2, bm2X]].forEach(([c, x]) => { if (c.width !== mw || c.height !== mh){ c.width = mw; c.height = mh; }
+      x.globalCompositeOperation = 'source-over'; x.filter = 'none'; x.fillStyle = '#000'; x.fillRect(0, 0, mw, mh); });
     if (!face || faceMiss >= 3) return;
-    const poly = (ids, color) => { bmX.fillStyle = color; bmX.beginPath(); ids.forEach((id, n) => { const [x, y] = P(id); n ? bmX.lineTo(x * k, y * k) : bmX.moveTo(x * k, y * k); }); bmX.closePath(); bmX.fill(); };
-    if (filterOK) bmX.filter = `blur(${Math.max(1, mw / 90)}px)`;
-    bmX.globalCompositeOperation = 'lighter';
-    poly(OVAL, '#ff0000');
-    poly(LIPS_OUT, '#00ff00');
-    [EYE_R, EYE_L, BROW_R, BROW_L, LIPS_IN].forEach(ids => poly(ids, '#0000ff'));
+    const feather = Math.max(1, mw / 80);
+    const poly = (x, ids, color, shrink) => {
+      let cx = 0, cy = 0; if (shrink){ ids.forEach(id => { cx += face.p[id * 2]; cy += face.p[id * 2 + 1]; }); cx /= ids.length; cy /= ids.length; }
+      x.fillStyle = color; x.beginPath();
+      ids.forEach((id, n) => { let [px, py] = P(id); if (shrink){ px = cx + (px - cx) * shrink; py = cy + (py - cy) * shrink; } n ? x.lineTo(px * k, py * k) : x.moveTo(px * k, py * k); });
+      x.closePath(); x.fill();
+    };
+    bmX.globalCompositeOperation = 'lighter'; if (filterOK) bmX.filter = `blur(${feather}px)`;
+    poly(bmX, OVAL, '#ff0000', 0.94);
+    poly(bmX, LIPS_OUT, '#00ff00');
+    [EYE_R, EYE_L, BROW_R, BROW_L, LIPS_IN].forEach(ids => poly(bmX, ids, '#0000ff', 1.12));
     bmX.filter = 'none'; bmX.globalCompositeOperation = 'source-over';
+
+    bm2X.globalCompositeOperation = 'lighter'; if (filterOK) bm2X.filter = `blur(${feather * 1.6}px)`;
+    const ew = (dist(P(33), P(133)) + dist(P(263), P(362))) / 2;
+    [[avg(33, 133, 159, 145)], [avg(263, 362, 386, 374)]].forEach(([c]) => {
+      bm2X.fillStyle = '#ff0000'; bm2X.beginPath(); bm2X.ellipse(c[0] * k, (c[1] + ew * 0.55) * k, ew * 0.62 * k, ew * 0.3 * k, 0, 0, 6.29); bm2X.fill(); });
+    poly(bm2X, BROW_R, '#00ff00'); poly(bm2X, BROW_L, '#00ff00');
+    bm2X.filter = 'none';
+    bm2X.strokeStyle = '#0000ff'; bm2X.lineWidth = Math.max(1, ew * 0.12 * k); bm2X.lineJoin = 'round';
+    [EYE_R, EYE_L].forEach(ids => { bm2X.beginPath(); ids.forEach((id, n) => { const [px, py] = P(id); n ? bm2X.lineTo(px * k, py * k) : bm2X.moveTo(px * k, py * k); }); bm2X.closePath(); bm2X.stroke(); });
+    bm2X.globalCompositeOperation = 'source-over';
+  }
+
+  // Blurred copies of the picture at two sizes, used to airbrush the skin cheaply
+  const [bMid, bMidX] = mk(), [bLow, bLowX] = mk(), [bTmp, bTmpX] = mk();
+  function pyramid(W, H){
+    const set = (c, w, h) => { w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h)); if (c.width !== w || c.height !== h){ c.width = w; c.height = h; } };
+    set(bTmp, W / 3, H / 3); set(bMid, W / 6, H / 6); set(bLow, W / 14, H / 14);
+    [bTmpX, bMidX, bLowX].forEach(x => { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; });
+    bTmpX.drawImage(work, 0, 0, bTmp.width, bTmp.height);
+    bMidX.drawImage(bTmp, 0, 0, bMid.width, bMid.height);
+    bTmpX.drawImage(bMid, 0, 0, bTmp.width / 2, bTmp.height / 2);
+    bLowX.drawImage(bTmp, 0, 0, bTmp.width / 2, bTmp.height / 2, 0, 0, bLow.width, bLow.height);
   }
 
   const VS = 'attribute vec2 a;varying vec2 v;void main(){v=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}';
   const FS = `precision highp float;varying vec2 v;
-uniform sampler2D uImg,uMask;uniform vec2 uRes;uniform float uSmooth,uTone,uLips,uHasFace,uMidX;
-uniform vec4 uEyeL,uEyeR,uJawL,uJawR,uNose;
-vec2 eye(vec2 p,vec4 E){vec2 d=p-E.xy;float t=length(d)/E.z;if(t<1.){p=E.xy+d*(1.-E.w*(1.-t*t));}return p;}
-vec2 jaw(vec2 p,vec4 J){float t=length(p-J.xy)/J.z;if(t<1.){float w=1.-t*t;w*=w;p.x+=sign(J.x-uMidX)*J.w*J.z*w;}return p;}
-vec2 nose(vec2 p,vec4 N){float t=length(p-N.xy)/N.z;if(t<1.){p.x=N.x+(p.x-N.x)*(1.+N.w*(1.-t*t));}return p;}
-float skinP(vec3 c){float cr=.5*c.r-.4187*c.g-.0813*c.b;float cb=-.1687*c.r-.3313*c.g+.5*c.b;
- return smoothstep(.0,.05,cr)*(1.-smoothstep(.26,.32,cr))*smoothstep(-.3,-.2,cb)*(1.-smoothstep(.02,.08,cb));}
+uniform sampler2D uImg,uMid,uLow,uMask,uMask2;uniform vec2 uRes;
+uniform float uSmooth,uTone,uLips,uDefine,uHasFace,uMidX;
+uniform vec4 uEyeL,uEyeR,uMouth,uNose;uniform vec4 uJ[8];
+vec2 mag(vec2 p,vec4 E){vec2 d=p-E.xy;float t=length(d)/E.z;if(t<1.){p=E.xy+d*(1.-E.w*(1.-t*t)*(1.-t*t));}return p;}
+vec2 pull(vec2 p,vec4 J){float t=length(p-J.xy)/J.z;if(t<1.){float w=1.-t*t;w*=w;p.x+=sign(J.x-uMidX)*J.w*J.z*w;}return p;}
+vec2 pinch(vec2 p,vec4 N){float t=length(p-N.xy)/N.z;if(t<1.){p.x=N.x+(p.x-N.x)*(1.+N.w*(1.-t*t));}return p;}
 vec3 softl(vec3 b,vec3 s){return mix(2.*b*s+b*b*(1.-2.*s),sqrt(b)*(2.*s-1.)+2.*b*(1.-s),step(.5,s));}
+float L(vec3 c){return dot(c,vec3(.299,.587,.114));}
 void main(){
  vec2 p=v*uRes;
- if(uHasFace>.5){p=eye(p,uEyeL);p=eye(p,uEyeR);p=jaw(p,uJawL);p=jaw(p,uJawR);p=nose(p,uNose);}
- vec3 c=texture2D(uImg,p/uRes).rgb;
- vec4 m=texture2D(uMask,v);
- float keep=m.b;
- float lip=m.g*(1.-keep);
- float sk=skinP(c);
- float skin=uHasFace>.5? m.r*(1.-keep)*(.55+.45*sk) : sk*.7;
- skin*=1.-lip*.6;
- if(uSmooth>0. && skin>.01){
-  float r=uRes.y/210.;vec3 acc=c;float ws=1.;
-  for(int i=0;i<16;i++){float a=float(i)*.3927;float rr=mod(float(i),2.)<.5?r:r*2.2;
-   vec3 s=texture2D(uImg,(p+vec2(cos(a),sin(a))*rr)/uRes).rgb;vec3 d=s-c;float w=exp(-dot(d,d)/.014);acc+=s*w;ws+=w;}
-  c=mix(c,acc/ws,clamp(uSmooth*skin*1.15,0.,1.));
+ if(uHasFace>.5){
+  p=mag(p,uEyeL);p=mag(p,uEyeR);p=mag(p,uMouth);p=pinch(p,uNose);
+  for(int i=0;i<8;i++){p=pull(p,uJ[i]);}
  }
- if(uTone>0.){
-  float l=dot(c,vec3(.299,.587,.114));
-  vec3 t=c*(1.+(1.-l)*(1.-l)*.55);
-  float lt=dot(t,vec3(.299,.587,.114));
-  t=mix(vec3(lt),t,1.12);
-  t*=vec3(1.015,1.,.975);
-  t=mix(t,t*.88+.06,smoothstep(.6,.9,lt));
-  c=mix(c,t,uTone*skin);
- }
- if(uLips>0.){vec3 pink=vec3(.94,.42,.52);vec3 sl=softl(c,pink);sl+=.04;c=mix(c,sl,clamp(uLips*lip,0.,1.));}
+ vec2 q=p/uRes;
+ vec3 c=texture2D(uImg,q).rgb, mid=texture2D(uMid,q).rgb, low=texture2D(uLow,q).rgb;
+ vec4 m=texture2D(uMask,v), m2=texture2D(uMask2,v);
+ float keep=clamp(m.b,0.,1.), lip=m.g*(1.-keep);
+ float skin=uHasFace>.5 ? m.r*(1.-keep)*(1.-lip) : 0.;
+ // airbrush: take away fine texture and blotches, keep real edges
+ vec3 det=c-mid; float edge=smoothstep(.07,.16,length(det));
+ vec3 sm=mid+det*mix(1.-uSmooth*.92,1.,edge);
+ vec3 ev=sm+(low-mid)*uTone*.6;                        // even out patches and dark marks
+ ev*=1.+uTone*.07;                                     // gentle lift so cheeks stay evenly lit
+ float lo=L(ev), lm=L(low); ev=mix(ev,mix(ev,low*1.06,.7),smoothstep(lm+.06,lm+.25,lo)*uTone*.85); // flatten shine patches, keep a soft glow
+ float le=L(ev); ev=mix(vec3(le),ev,1.-uTone*.1);       // slightly less red, more natural
+ ev*=1.+m2.r*uTone*.28;                                // brighten under the eyes
+ c=mix(c,ev,clamp(skin,0.,1.));
+ // define brows and lashes
+ c*=1.-uDefine*(m2.g*.22+m2.b*.3)*(1.-skin*.5);
+ // lips: nude pink with a little gloss
+ if(uLips>0.){vec3 sl=softl(c,vec3(.9,.5,.55));float g=smoothstep(.35,.6,L(c));sl+=g*.06;c=mix(c,sl,clamp(uLips*lip,0.,1.));}
  gl_FragColor=vec4(c,1.);
 }`;
   function initGL(){
@@ -866,41 +894,45 @@ void main(){
       const tex = () => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
         [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); return t; };
-      glTex = tex(); glMask = tex();
-      ['uImg','uMask','uRes','uSmooth','uTone','uLips','uHasFace','uMidX','uEyeL','uEyeR','uJawL','uJawR','uNose'].forEach(n => U[n] = gl.getUniformLocation(glProg, n));
-      gl.uniform1i(U.uImg, 0); gl.uniform1i(U.uMask, 1);
+      glTex = [tex(), tex(), tex(), tex(), tex()];
+      ['uImg','uMid','uLow','uMask','uMask2','uRes','uSmooth','uTone','uLips','uDefine','uHasFace','uMidX','uEyeL','uEyeR','uMouth','uNose','uJ'].forEach(n => U[n] = gl.getUniformLocation(glProg, n));
+      ['uImg','uMid','uLow','uMask','uMask2'].forEach((n, i) => gl.uniform1i(U[n], i));
       return true;
     } catch (e) { glFailed = true; gl = null; console.warn('beauty off', e); return false; }
   }
+  function upload(i, src){ gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, glTex[i]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); }
 
   function beauty(W, H){
     if (!initGL()) return false;
     if (glc.width !== W || glc.height !== H){ glc.width = W; glc.height = H; maskDirty = true; }
     gl.viewport(0, 0, W, H);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, glTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, work);
+    pyramid(W, H);
+    upload(0, work); upload(1, bMid); upload(2, bLow);
     const has = face && faceMiss < 3 && face.W === W;
-    if (maskDirty || !has){ drawMask(W, H); maskDirty = false;
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, glMask);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bm); }
-    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, glMask);
+    if (maskDirty || !has){ drawMask(W, H); maskDirty = false; upload(3, bm); upload(4, bm2); }
     gl.uniform2f(U.uRes, W, H);
-    gl.uniform1f(U.uSmooth, S.smooth / 100); gl.uniform1f(U.uTone, S.tone / 100); gl.uniform1f(U.uLips, S.lips / 100 * 0.9);
+    gl.uniform1f(U.uSmooth, S.smooth / 100); gl.uniform1f(U.uTone, S.tone / 100);
+    gl.uniform1f(U.uLips, S.lips / 100); gl.uniform1f(U.uDefine, Math.max(S.tone, S.eyes) / 100);
     gl.uniform1f(U.uHasFace, has ? 1 : 0);
+    const J = new Float32Array(32);
     if (has){
+      const ew = (dist(P(33), P(133)) + dist(P(263), P(362))) / 2, ek = S.eyes / 100 * 0.36;
       const er = avg(33, 133, 159, 145), el = avg(263, 362, 386, 374);
-      const ew = (dist(P(33), P(133)) + dist(P(263), P(362))) / 2;
-      const ek = S.eyes / 100 * 0.22;
-      gl.uniform4f(U.uEyeR, er[0], er[1], ew * 1.15, ek); gl.uniform4f(U.uEyeL, el[0], el[1], ew * 1.15, ek);
-      const fw = dist(P(234), P(454)), mid = avg(1, 152)[0];
-      const jl = avg(172, 136, 58), jr = avg(397, 365, 288), sk = S.slim / 100 * 0.16;
-      gl.uniform1f(U.uMidX, mid);
-      gl.uniform4f(U.uJawL, jl[0], jl[1], fw * 0.42, sk); gl.uniform4f(U.uJawR, jr[0], jr[1], fw * 0.42, sk);
+      gl.uniform4f(U.uEyeR, er[0], er[1], ew * 1.35, ek); gl.uniform4f(U.uEyeL, el[0], el[1], ew * 1.35, ek);
+      const mc = avg(13, 14, 61, 291), mwid = dist(P(61), P(291));
+      gl.uniform4f(U.uMouth, mc[0], mc[1], mwid * 0.8, S.lips / 100 * 0.17);
       const nc = avg(129, 358, 4);
-      gl.uniform4f(U.uNose, nc[0], nc[1], dist(P(129), P(358)) * 0.95, S.slim / 100 * 0.12);
+      gl.uniform4f(U.uNose, nc[0], nc[1], dist(P(129), P(358)) * 1.0, S.slim / 100 * 0.3);
+      const fw = dist(P(234), P(454)), mid = avg(1, 152, 10)[0], sk = S.slim / 100;
+      gl.uniform1f(U.uMidX, mid);
+      // jawline and cheeks pulled toward the middle: strongest at the lower jaw, for a V shape
+      [[172, .07, .34], [136, .07, .28], [150, 0, .2], [397, .07, .34], [365, .07, .28], [379, 0, .2], [132, .03, .3], [361, .03, .3]]
+        .forEach(([id, amt, rad], i) => { const [x, y] = P(id); J.set([x, y, fw * rad, amt * sk / rad], i * 4); });
     } else {
-      [U.uEyeL, U.uEyeR, U.uJawL, U.uJawR, U.uNose].forEach(u => gl.uniform4f(u, 0, 0, 1, 0));
+      [U.uEyeL, U.uEyeR, U.uMouth, U.uNose].forEach(u => gl.uniform4f(u, 0, 0, 1, 0));
+      for (let i = 0; i < 8; i++) J.set([0, 0, 1, 0], i * 4);
     }
+    gl.uniform4fv(U.uJ, J);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return true;
   }

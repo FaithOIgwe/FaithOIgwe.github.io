@@ -158,12 +158,12 @@ function rCourse(){
 function rLesson(id){
   const u=UNITS.find(x=>x.id===id);if(!u){location.hash='#course';return''}
   const i=UNITS.indexOf(u),pv=UNITS[i-1],nx=UNITS[i+1];CL=u.lv;
-  INIT=()=>{$('#playall').onclick=()=>playSeq(u.ex.map(e=>e[0]));
+  INIT=()=>{$('#playall').onclick=()=>playSeq(u.ex.map(e=>e[0]));const pd=$('#playdlg');if(pd)pd.onclick=()=>playSeq(DEEP[u.id].dialogue.map(d=>d[1]));
     $$('.q').forEach((q,qi)=>{const inp=$('input',q),fb=$('.fb',q),go=()=>{const r=checkAns(inp.value,u.q[qi][1]);fb.className='fb '+(r===2?'ok':r===1?'warn':'bad');fb.textContent=r===2?'Correct.':r===1?'Almost: check the accents. Answer: '+u.q[qi][1].split('|')[0]:'Not yet. '+(u.q[qi][2]?'Hint: '+u.q[qi][2]+'. ':'')+'Try again or reveal.'};
       $('.chk',q).onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};$('.rev',q).onclick=()=>{fb.className='fb mute';fb.textContent='Answer: '+u.q[qi][1].split('|').join(' or ')}});
     $('#done').onclick=()=>{S.done[u.id]=!S.done[u.id];save();toast(S.done[u.id]?'Unit done. Its words are now in your review cards.':'Marked as not done.');route()}};
   return`<section class="band"><div class="wrap"><a href="#course" class="small">← Parcours ${u.lv}</a>
-  <div class="two" style="margin-top:10px"><div class="paper"><p class="hand">${u.lv} · unit ${u.n} of ${CNT[u.lv]}</p><h1>${esc(u.t)}</h1><p>${esc(u.g)}</p>
+  <div class="two" style="margin-top:10px"><div class="paper"><p class="hand">${u.lv} · unit ${u.n} of ${CNT[u.lv]}</p><h1>${esc(u.t)}</h1>${deepHTML(u)}
    <h2>Examples</h2><div>${u.ex.map(e=>`<div class="ex">${sb(e[0])}<div><div class="fr" lang="fr">${esc(e[0])}</div><div class="en">${esc(e[1])}</div></div></div>`).join('')}</div>
    <div class="row" style="margin-top:10px"><button id="playall">${SPK} Play all</button><span class="small mute">Then say each one out loud, copying the rhythm.</span></div>
    <h3 style="margin-top:18px">Record yourself reading the examples</h3>${recHTML(u.lv+'.'+u.n+' '+u.t,u.ex.map(e=>e[0]).join(' '))}</div>
@@ -514,7 +514,7 @@ const hash=s=>{let h=2166136261;for(const c of s){h^=c.codePointAt(0);h=Math.imu
 const pubUrl=path=>`${CFG.supabaseUrl}/storage/v1/object/public/voices/${path}`;
 async function loadClips(){try{const {data}=await db.from('voice_clips').select('text_key,path,speaker_name').limit(5000);(data||[]).forEach(r=>{CLIPS[r.text_key]={kind:'clip',u:pubUrl(r.path),sp:r.speaker_name,path:r.path}})}catch(e){}}
 function studioGroups(){const uniq=a=>[...new Set(a.map(x=>String(x).trim()).filter(Boolean))];return[
-  ['Lesson examples',uniq(UNITS.flatMap(u=>u.ex.map(e=>e[0])))],['Listening',uniq(LIS.map(x=>x[1]))],['Reading',uniq(READ.map(x=>x[2]))],
+  ['Lesson examples',uniq(UNITS.flatMap(u=>u.ex.map(e=>e[0])))],['Lesson dialogues and tables',uniq(Object.values(typeof DEEP!=='undefined'?DEEP:{}).flatMap(D=>D.dialogue.map(d=>d[1]).concat(D.steps.filter(x=>x.say&&x.t).flatMap(x=>x.t.map(r=>r[0])))))],['Listening',uniq(LIS.map(x=>x[1]))],['Reading',uniq(READ.map(x=>x[2]))],
   ['Speaking',uniq(ST.flatMap(t=>t.p.concat(t.ph)))],['Pronunciation',uniq(RULES.flatMap(r=>r[2]).concat(SND.flatMap(s=>s[4]),PAIRS.flatMap(p=>[p[0],p[1]])))],
   ['Vocabulary',uniq(UNITS.flatMap(u=>u.v.map(v=>v[0])))]]}
 let SG=0,SMISS=true;
@@ -536,6 +536,18 @@ async function studioUpload(box,btn){const key=box.dataset.key,blob=box._blob;bt
     if(old&&old.path)db.storage.from('voices').remove([old.path]).catch(()=>{});
     CLIPS[key]={kind:'clip',u:pubUrl(path),sp:RECORDER.speaker_name,path};btn.textContent='Saved for everyone';toast('Saved. Learners now hear this recording.')}
   catch(e){btn.disabled=false;btn.textContent='Use this take';toast('Upload failed: '+(e.message||e))}}
+
+/* ---------- FULL LESSON RENDERING ---------- */
+function deepHTML(u){const D=(typeof DEEP!=='undefined')&&DEEP[u.id];if(!D)return`<p>${esc(u.g)}</p>`;
+  const tbl=st=>st.t?`<div class="scroll"><table class="stack lt">${st.th?`<thead><tr>${st.th.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`:''}<tbody>${st.t.map(r=>`<tr>${r.map((c,i)=>`<td${i===0&&st.say?' class="frc"':''}>${i===0&&st.say?`<span class="row" style="gap:6px;flex-wrap:nowrap">${sb(c)}<b lang="fr">${esc(c)}</b></span>`:esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'';
+  return`<p class="lead">${esc(D.hook)}</p>
+  ${D.steps.map((st,i)=>`<h2><span class="hand" style="font-size:30px">${i+1}.</span> ${esc(st.h)}</h2>${st.p?`<p>${esc(st.p)}</p>`:''}${tbl(st)}`).join('')}
+  <div class="trick"><p class="hand">Memory trick</p><p style="margin:0">${esc(D.trick)}</p></div>
+  <h2>Mistakes beginners make</h2><div class="scroll"><table class="stack lt"><thead><tr><th>Don't say</th><th>Say</th><th>Why</th></tr></thead><tbody>${D.mistakes.map(m=>`<tr><td class="bad" lang="fr"><s>${esc(m[0])}</s></td><td class="ok" lang="fr"><b>${esc(m[1])}</b></td><td>${esc(m[2])}</td></tr>`).join('')}</tbody></table></div>
+  <h2>Say it right</h2><p>${esc(D.sound)}</p>
+  <h2>In real life</h2><div class="dlg">${D.dialogue.map(d=>`<div class="ex">${sb(d[1])}<div><div class="fr" lang="fr"><span class="mute">${esc(d[0])} :</span> ${esc(d[1])}</div><div class="en">${esc(d[2])}</div></div></div>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><button id="playdlg">${SPK} Play the dialogue</button><span class="small mute">Then hide the English and act it out loud, both parts.</span></div>
+  <h2>In one line</h2><p class="mute">${esc(u.g)}</p>`}
 /* ---------- ROUTER ---------- */
 const VIEWS={today:rToday,course:rCourse,drill:rDrill,sounds:rSounds,shadow:rShadow,listen:rListen,read:rRead,write:rWrite,speak:rSpeak,words:rWords,tcf:rTcf,plan:rPlan,community:rCommunity,account:rAccount,studio:rStudio};
 function route(){

@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cahier: French to TCF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a patient teacher who is serious about the exam date
+   IDEA: a French school cahier: Séyès-ruled paper, red margin, blue fountain-pen ink
+   PICTURE: today's lesson page written on ruled paper beside an A1→C2 ladder and exam countdown
+   COLOUR and TYPE: white paper, encre bleue, margin red; Fraunces titles, Atkinson Hyperlegible body, Caveat for the handwritten notes
+   LAYOUT: ink header + scrolling tab row; every tab opens on the working tool, notes below */
+:root{color-scheme:light dark;
+--bg:light-dark(#f3f5fc,#0a0f27);--paper:light-dark(#ffffff,#111938);--ink:light-dark(#141e62,#e8ecff);
+--mute:light-dark(#555e8e,#a8b1dc);--rule:light-dark(#dde4fa,#1e2a5a);--red:light-dark(#d32a44,#ff7a8c);
+--blue:light-dark(#2340d8,#9caeff);--soft:light-dark(#e9eeff,#19234f);--ok:light-dark(#11744a,#62d9a2);
+--warn:light-dark(#9a4f00,#ffc46b);--hd:light-dark(#141e62,#060a1d);--line:light-dark(#c9d2f2,#2a376c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:700;line-height:1.1;margin:0 0 .4em;text-wrap:balance}
+h1{font-size:clamp(32px,5vw,46px)}h2{font-size:24px;margin-top:1.4em}h3{font-size:19px;font-weight:500}
+p{margin:.3em 0 .8em;max-width:70ch}a{color:var(--blue)}
+.band{padding:clamp(22px,3.5vw,48px) max(4vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+header{background:var(--hd);color:#fff;padding:14px max(4vw,16px) 0}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;max-width:1240px;margin:0 auto}
+.brand b{font:700 26px Fraunces,serif}.brand span{opacity:.75;font-size:14px}
+.tabs{display:flex;gap:4px;overflow-x:auto;max-width:1240px;margin:10px auto 0;scrollbar-width:none}
+.tabs a{flex:none;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px 10px 0 0;opacity:.78;min-height:44px;display:flex;align-items:center}
+.tabs a.on{background:var(--bg);color:var(--ink);opacity:1;font-weight:700}
+.tabs a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.paper{position:relative;background-color:var(--paper);background-image:repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px);border-radius:14px;padding:22px 22px 22px 70px;box-shadow:0 1px 0 var(--line),0 12px 30px -18px #0b145266}
+.paper::before{content:"";position:absolute;left:48px;top:0;bottom:0;width:2px;background:var(--red);opacity:.75}
+.card{background:var(--paper);border-radius:14px;padding:20px;box-shadow:0 1px 0 var(--line),0 10px 26px -20px #0b145266}
+.hand{font:600 26px/1.1 Caveat,cursive;color:var(--red);margin:0}
+.mute{color:var(--mute)}.small{font-size:14px}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--red)}
+button,.btn{font:inherit;cursor:pointer;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:9px 15px;min-height:44px;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+button:hover,.btn:hover{border-color:var(--blue)}
+.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.sm{min-height:38px;padding:6px 12px;font-size:15px}
+.say{width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;flex:none;color:var(--blue)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 18px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+textarea{width:100%;min-height:220px;line-height:32px;background-image:repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px);background-attachment:local}
+label{font-weight:700}
+.tgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:24px;align-items:start}
+.session ol{list-style:none;margin:0;padding:0}
+.blk{display:grid;grid-template-columns:76px minmax(0,1fr) 48px;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
+.blk:last-child{border-bottom:0}
+.mins{font:600 34px/1 Caveat,cursive;color:var(--red);white-space:nowrap}
+.mins small{font-size:18px}
+.blk.done h3,.blk.done p{opacity:.5}.blk.done h3{text-decoration:line-through}
+.tick{position:relative;width:44px;height:44px}.tick input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.tick span{position:absolute;inset:6px;border:2px solid var(--ink);border-radius:8px}
+.tick input:checked+span{background:var(--ok);border-color:var(--ok)}
+.tick input:checked+span::after{content:"";position:absolute;left:10px;top:3px;width:8px;height:16px;border:solid var(--paper);border-width:0 3px 3px 0;transform:rotate(45deg)}
+.tick input:focus-visible+span{outline:3px solid var(--red);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.count{font:600 clamp(56px,9vw,84px)/.9 Caveat,cursive;color:var(--red)}
+.ladder{display:grid;gap:8px;margin-top:14px}
+.rung{display:grid;grid-template-columns:34px minmax(0,1fr) 70px;gap:10px;align-items:center;font-size:14px}
+.rung b{font-family:Fraunces,serif}.bar{height:12px;border-radius:6px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:6px}
+.rung.tg b{color:var(--red)}
+.units{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.unit{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;text-decoration:none;color:inherit;padding:16px}
+.unit .n{font:600 30px/1 Caveat,cursive;color:var(--red)}.unit.dn .n{color:var(--ok)}
+.ex{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;padding:4px 0}
+.ex .fr{font-weight:700;font-size:18px}.ex .en{color:var(--mute);font-size:15px}
+.vocab{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.vw{display:flex;gap:10px;align-items:center;background:var(--soft);border-radius:12px;padding:4px 12px 4px 4px}
+.q{padding:12px 0;border-bottom:1px dashed var(--line)}.q:last-child{border-bottom:0}
+.q input{width:min(260px,100%)}
+.fb{font-weight:700;margin:.4em 0 0}
+.big{font:700 clamp(24px,4vw,34px)/1.25 Fraunces,serif;margin:12px 0}
+.snd{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.ipa{font:700 40px/1 Fraunces,serif;color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:0;background:var(--soft);border-radius:999px;padding:6px 14px;min-height:40px;font-weight:700}
+.opts{display:grid;gap:8px;margin:10px 0}.opts button{justify-content:flex-start;text-align:left}
+.opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--paper))}
+.opts button.wrong{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--paper))}
+.w-ok{color:var(--ok)}.w-acc{color:var(--warn);text-decoration:underline wavy}.w-miss{color:var(--red);text-decoration:line-through}
+.flash{min-height:230px;display:grid;place-items:center;text-align:center;cursor:pointer}
+.timer{font:600 48px/1 Caveat,cursive;color:var(--red)}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:start}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:Fraunces,serif}td.num,th.num{text-align:right;white-space:nowrap}
+.note{background:var(--soft);border-radius:12px;padding:12px 16px;font-size:15px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:92vw;z-index:9}
+.toast.on{opacity:1}
+.phase{min-height:1.6em;font:600 24px Caveat,cursive;color:var(--red)}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.form label{display:grid;gap:6px}
+details{margin:10px 0}summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
+@media(max-width:900px){.tgrid,.two{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.paper{padding:18px 14px 18px 44px}.paper::before{left:30px}.blk{grid-template-columns:52px minmax(0,1fr) 44px;gap:8px}.mins{font-size:28px}
+table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;font-weight:700;white-space:normal}.stack td:empty{display:none}}
+@media(prefers-reduced-motion:no-preference){.blk,.card,.unit{transition:opacity .25s}.flash{transition:transform .25s}.flash:active{transform:scale(.98)}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header>
+  <div class="brand"><b>Cahier</b><span>French from A1 to C2 for the TCF</span></div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#today">Aujourd'hui</a><a href="#course">Parcours</a><a href="#sounds">Sons</a><a href="#shadow">Shadowing</a><a href="#listen">Écoute</a><a href="#read">Lecture</a><a href="#write">Écriture</a><a href="#speak">Oral</a><a href="#words">Mots</a><a href="#tcf">TCF</a><a href="#plan">Plan</a>
+  </nav>
+</header>
+<main id="main"></main>
+<div class="toast" id="toast" role="status"></div>
+<script>
+{
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LV=['A1','A2','B1','B2','C1','C2'];
+const END={A1:100,A2:200,B1:400,B2:600,C1:850,C2:1100};
+const prevEnd=l=>{const i=LV.indexOf(l);return i?END[LV[i-1]]:0};
+const LVINFO={
+A1:['Découverte','100–199','Introduce yourself, ask and answer simple questions about familiar things, follow slow and clear speech.'],
+A2:['Survie','200–299','Handle routine tasks and short exchanges, talk about your past and surroundings, read short practical texts.'],
+B1:['Seuil','300–399','Cope with most everyday situations, tell a story, give opinions with reasons, write a connected text.'],
+B2:['Avancé','400–499','Argue a point clearly, follow most radio, TV and articles, write a structured, detailed essay.'],
+C1:['Autonome','500–599','Speak fluently and precisely, understand long demanding texts and what is implied, switch register at will.'],
+C2:['Maîtrise','600–699','Understand virtually everything, summarise sources coherently, express fine shades of meaning spontaneously.']};
+
+/* ---------- CURRICULUM: [level, title, explanation, examples[fr,en], vocab[fr,en], exercises[prompt, answer(s) | separated, hint]] ---------- */
+const RAW=[
+["A1","Saluer et se présenter","Use tu with friends, family and children; use vous with strangers, in formal situations, or for more than one person. To give your name say je m'appelle (literally 'I call myself'). French stresses the last syllable of each group of words, so keep the other syllables short and even.",
+[["Bonjour, je m'appelle Faith.","Hello, my name is Faith."],["Comment vous appelez-vous ?","What is your name? (formal)"],["Enchantée ! Je suis nigériane.","Nice to meet you! I'm Nigerian. (a woman speaking)"],["Salut, ça va ? Ça va bien, merci.","Hi, how are you? Fine, thanks."]],
+[["bonjour","hello, good morning"],["bonsoir","good evening"],["salut","hi (informal)"],["au revoir","goodbye"],["merci beaucoup","thank you very much"],["s'il vous plaît","please (formal)"]],
+[["Comment tu ___ ? (s'appeler)","t'appelles","tu form of s'appeler"],["Je ___ appelle Marie.","m'","me becomes m' before a vowel"]]],
+["A1","Être et avoir","These two irregular verbs carry the whole language. Être: je suis, tu es, il/elle/on est, nous sommes, vous êtes, ils/elles sont. Avoir: j'ai, tu as, il/elle/on a, nous avons, vous avez, ils/elles ont. French uses avoir for age (j'ai 26 ans). In speech, on is the everyday word for 'we'.",
+[["Je suis analyste de données.","I am a data analyst."],["Nous avons un chat et un chien.","We have a cat and a dog."],["Elle a vingt-six ans.","She is twenty-six."],["Vous êtes d'où ? Je suis du Nigeria.","Where are you from? I'm from Nigeria."]],
+[["un an","a year"],["un métier","a job, trade"],["un pays","a country"],["une ville","a city"],["la famille","the family"],["un ami, une amie","a friend"]],
+[["Ils ___ fatigués. (être)","sont","ils form of être"],["J'___ faim. (avoir)","ai","j' + avoir"],["Tu ___ quel âge ? (avoir)","as",""]]],
+["A1","Le genre et les articles","Every noun is masculine or feminine, so learn each noun with its article. Definite: le (m), la (f), l' (before a vowel or silent h), les (plural). Indefinite: un (m), une (f), des (plural). The plural -s is silent, so you hear the plural in the article: le livre sounds different from les livres.",
+[["J'aime le café et la musique.","I like coffee and music."],["Il y a un livre sur la table.","There is a book on the table."],["Les enfants sont à l'école.","The children are at school."]],
+[["le livre","the book"],["la table","the table"],["l'école","school (f)"],["la maison","the house"],["le téléphone","the phone"],["l'eau","water (f)"]],
+[["J'ai ___ voiture rouge. (a)","une","voiture is feminine"],["___ hôtel est grand. (the)","l'","silent h takes l'"]]],
+["A1","Les verbes en -er et la négation","Most verbs end in -er. Drop -er and add -e, -es, -e, -ons, -ez, -ent. Only the nous and vous forms sound different: je parle, tu parles and ils parlent all sound the same. To make a sentence negative, wrap the verb in ne … pas; ne becomes n' before a vowel. In casual speech the ne often disappears: je sais pas.",
+[["Je parle anglais et un peu français.","I speak English and a little French."],["Nous travaillons le lundi.","We work on Mondays."],["Elle n'aime pas le froid.","She doesn't like the cold."]],
+[["parler","to speak"],["travailler","to work"],["habiter","to live (somewhere)"],["aimer","to like, to love"],["manger","to eat"],["écouter","to listen"]],
+[["Vous ___ à Lagos ? (habiter)","habitez",""],["Il n'___ pas le thé. (aimer)","aime",""],["Nous ___ la radio. (écouter)","écoutons",""]]],
+["A1","Poser des questions","Three ways to ask, from casual to formal: rising intonation (Tu viens ?), est-ce que (Est-ce que tu viens ?) and inversion (Viens-tu ?). Question words: qui (who), quoi / que (what), où (where), quand (when), comment (how), pourquoi (why), combien (how much, how many), quel / quelle (which).",
+[["Est-ce que tu aimes le sport ?","Do you like sport?"],["Où est la gare, s'il vous plaît ?","Where is the station, please?"],["Pourquoi tu apprends le français ? Parce que je veux travailler au Canada.","Why are you learning French? Because I want to work in Canada."]],
+[["où","where"],["quand","when"],["pourquoi","why"],["parce que","because"],["combien","how much, how many"],["comment","how"]],
+[["___ coûte ce sac ? (how much)","combien",""],["___ est-ce que tu habites ? (where)","où",""]]],
+["A1","Les adjectifs","Adjectives agree with their noun: add -e for feminine and -s for plural (petit, petite, petits, petites). Most go after the noun (une voiture rouge), but short common ones go before: beau, bon, grand, petit, jeune, vieux, nouveau, joli, mauvais. Adding -e often makes a silent consonant heard: petit ends in a vowel sound, petite ends in t.",
+[["C'est une ville très animée.","It's a very lively city."],["J'ai une petite sœur et un grand frère.","I have a little sister and a big brother."],["Les chaussures noires sont chères.","The black shoes are expensive."]],
+[["grand, grande","big, tall"],["petit, petite","small"],["nouveau, nouvelle","new"],["cher, chère","expensive, dear"],["content, contente","happy"],["facile","easy"]],
+[["Elle est très ___. (content)","contente",""],["Ce sont des robes ___. (vert)","vertes","feminine plural"]]],
+["A1","Nombres, heure et dates","Learn 0 to 20 by heart. After 60, French counts in twenties: 70 is soixante-dix (60 + 10), 80 is quatre-vingts (4 × 20), 90 is quatre-vingt-dix. Time: il est huit heures et demie. Dates use le + number (le 3 mars) except the first: le premier mai. Il y a means there is or there are.",
+[["Il est neuf heures et quart.","It's quarter past nine."],["Mon anniversaire, c'est le premier avril.","My birthday is the first of April."],["Ça coûte quatre-vingt-quinze euros.","It costs ninety-five euros."]],
+[["aujourd'hui","today"],["demain","tomorrow"],["hier","yesterday"],["la semaine","the week"],["le mois","the month"],["midi","noon"]],
+[["70 = ___","soixante-dix",""],["Il est 12 h : il est ___.","midi",""]]],
+["A1","Aller, faire, venir et le futur proche","Aller: je vais, tu vas, il va, nous allons, vous allez, ils vont. Faire: je fais, nous faisons, vous faites, ils font. Venir: je viens, nous venons, ils viennent. The futur proche is aller + infinitive: je vais partir. With places: à + city (à Paris), en + feminine country (en France), au + masculine country (au Nigeria, au Canada), aux + plural (aux États-Unis).",
+[["Ce week-end, je vais faire du sport.","This weekend I'm going to do some sport."],["Nous allons au Canada en juin.","We're going to Canada in June."],["Tu viens avec nous ce soir ?","Are you coming with us tonight?"]],
+[["le week-end","the weekend"],["le voyage","the trip"],["partir","to leave"],["la gare","the train station"],["l'avion","the plane (m)"],["faire les courses","to do the shopping"]],
+[["Elle ___ au Sénégal l'année prochaine. (aller)","va",""],["Nous habitons ___ Canada.","au","masculine country"]]],
+
+["A2","Le passé composé avec avoir","For completed past actions: avoir in the present + past participle. -er verbs give -é (parlé), -ir verbs give -i (fini), and many common verbs are irregular: fait, pris, vu, eu, été, dit, écrit, lu, bu, mis. Negation goes around the auxiliary: je n'ai pas compris.",
+[["Hier, j'ai regardé un film français.","Yesterday I watched a French film."],["Tu as fini ton travail ?","Have you finished your work?"],["Je n'ai pas compris la question.","I didn't understand the question."]],
+[["hier soir","last night"],["la semaine dernière","last week"],["déjà","already"],["pas encore","not yet"],["comprendre","to understand"],["prendre","to take"]],
+[["Nous ___ pris le bus. (avoir)","avons",""],["Elle a ___ une lettre. (écrire)","écrit",""]]],
+["A2","Le passé composé avec être","About fifteen verbs of movement or change of state use être: aller, venir, arriver, partir, entrer, sortir, monter, descendre, naître, mourir, rester, tomber, retourner, passer, devenir, plus revenir and rentrer. All reflexive verbs use être too. The participle agrees with the subject: elle est partie, ils sont arrivés.",
+[["Elle est née à Enugu.","She was born in Enugu."],["Nous sommes rentrés très tard.","We came home very late."],["Je suis tombée dans l'escalier.","I fell on the stairs. (a woman speaking)"]],
+[["naître","to be born"],["arriver","to arrive"],["rester","to stay"],["tomber","to fall"],["rentrer","to go home"],["sortir","to go out"]],
+[["Mes amies sont ___ à 8 h. (partir)","parties","feminine plural agreement"],["Il ___ resté à la maison.","est","rester takes être"]]],
+["A2","L'imparfait","Use it for description, background, habits and ongoing states in the past. Take the nous form of the present, drop -ons, and add -ais, -ais, -ait, -ions, -iez, -aient (nous parlons gives je parlais). The only irregular stem is être: j'étais. Clue words: avant, quand j'étais petit(e), tous les jours, souvent.",
+[["Quand j'étais petite, j'habitais avec ma grand-mère.","When I was little I lived with my grandmother."],["Il faisait chaud et il y avait beaucoup de monde.","It was hot and there were lots of people."],["Avant, je prenais le bus tous les matins.","I used to take the bus every morning."]],
+[["avant","before, in the past"],["souvent","often"],["d'habitude","usually"],["l'enfance","childhood (f)"],["tous les jours","every day"],["le quartier","the neighbourhood"]],
+[["Nous ___ souvent à la plage. (aller)","allions",""],["Quand il était jeune, il ___ beaucoup. (lire)","lisait","nous lisons gives lis-"]]],
+["A2","Les verbes pronominaux et la routine","Reflexive verbs carry a pronoun that matches the subject: je me lève, tu te lèves, il se lève, nous nous levons, vous vous levez, ils se lèvent. In the passé composé they take être: elle s'est réveillée. In the futur proche the pronoun stays next to the infinitive: je vais me coucher.",
+[["Je me lève à six heures pour courir.","I get up at six to go running."],["On se retrouve devant le cinéma ?","Shall we meet in front of the cinema?"],["Elle s'est couchée tard hier.","She went to bed late yesterday."]],
+[["se lever","to get up"],["se réveiller","to wake up"],["se coucher","to go to bed"],["s'habiller","to get dressed"],["se dépêcher","to hurry"],["se reposer","to rest"]],
+[["Nous ___ couchons à 22 h.","nous",""],["Ils se sont ___ tôt. (réveiller)","réveillés",""]]],
+["A2","Les pronoms COD et COI","Direct object (who or what): me, te, le, la, l', nous, vous, les. Indirect object (to whom, after verbs with à): me, te, lui, nous, vous, leur. The pronoun goes before the verb: je la vois, je lui parle. In the passé composé it goes before the auxiliary, and the participle agrees with a direct object placed before it: je l'ai vue.",
+[["Tu connais Amina ? Oui, je la connais bien.","Do you know Amina? Yes, I know her well."],["J'ai téléphoné à mes parents : je leur ai dit la nouvelle.","I phoned my parents: I told them the news."],["Ce gâteau, je le prends.","This cake, I'll take it."]],
+[["téléphoner à","to phone"],["demander à","to ask"],["donner","to give"],["envoyer","to send"],["connaître","to know (a person, a place)"],["répondre à","to answer"]],
+[["Tu parles à ton frère ? Oui, je ___ parle.","lui","parler à takes an indirect object"],["Tu regardes les infos ? Oui, je ___ regarde.","les",""]]],
+["A2","Les articles partitifs et les quantités","For an unspecified amount use du, de la, de l', des (some): je bois du café. After a negative they become de or d': je ne bois pas de café. After a quantity use de alone: beaucoup de sucre, un kilo de riz, une bouteille d'eau. After aimer, adorer and détester keep le, la, les: j'aime le riz.",
+[["Je voudrais du pain et de la confiture.","I'd like some bread and jam."],["Il n'y a plus de lait.","There's no more milk."],["Achète un kilo de tomates, s'il te plaît.","Buy a kilo of tomatoes, please."]],
+[["le pain","bread"],["le riz","rice"],["la viande","meat"],["les légumes","vegetables (m)"],["une bouteille","a bottle"],["un peu de","a little"]],
+[["Je ne mange pas ___ viande.","de","negative gives de"],["Tu veux ___ eau ?","de l'","partitive before a vowel"]]],
+["A2","Comparer","Plus, moins or aussi + adjective + que: le train est plus rapide que le bus. With nouns: plus de, moins de, autant de … que. Irregular forms: bon becomes meilleur, bien becomes mieux. Superlative: le, la, les plus + adjective: la ville la plus chère.",
+[["Le train est plus rapide que le bus.","The train is faster than the bus."],["Elle parle mieux français que moi.","She speaks French better than me."],["C'est le meilleur restaurant du quartier.","It's the best restaurant in the neighbourhood."]],
+[["rapide","fast"],["lent, lente","slow"],["meilleur, meilleure","better (adjective)"],["mieux","better (adverb)"],["le pire","the worst"],["autant de","as much, as many"]],
+[["Ce café est ___ que l'autre. (better)","meilleur","bon becomes meilleur"],["Il court ___ que moi. (better)","mieux","adverb"]]],
+["A2","Y, en et l'impératif","Y replaces a place or à + thing: Tu vas à Paris ? Oui, j'y vais. En replaces de + noun or goes with a quantity: Tu as des frères ? Oui, j'en ai deux. The imperative uses the tu, nous and vous forms without a subject: Écoute ! Allons-y ! Prenez la deuxième rue. -er verbs drop the -s in the tu form (parle), except before y or en (vas-y).",
+[["Tu es déjà allée à Dakar ? Non, je n'y suis jamais allée.","Have you been to Dakar? No, I've never been there."],["Du café ? Oui, j'en veux bien.","Coffee? Yes, I'd love some."],["Tournez à gauche, puis continuez tout droit.","Turn left, then keep going straight."]],
+[["à gauche","on the left"],["à droite","on the right"],["tout droit","straight ahead"],["jamais","never"],["le carrefour","the crossroads"],["tourner","to turn"]],
+[["Combien de sœurs as-tu ? J'___ ai trois.","en",""],["Tu vas au marché ? Oui, j'___ vais.","y",""]]],
+
+["B1","Raconter : passé composé et imparfait","In a story the imparfait sets the scene (weather, feelings, what was going on) and the passé composé moves the plot forward (single events, interruptions): je dormais quand le téléphone a sonné. Signal words for events: soudain, tout à coup, un jour, ce jour-là.",
+[["Il pleuvait quand je suis sortie du bureau.","It was raining when I left the office."],["Nous mangions tranquillement quand, tout à coup, la lumière s'est éteinte.","We were eating quietly when suddenly the lights went out."],["Ce jour-là, j'ai compris que je voulais changer de métier.","That day I understood I wanted to change careers."]],
+[["soudain","suddenly"],["tout à coup","all of a sudden"],["pendant que","while"],["un souvenir","a memory"],["se rendre compte","to realise"],["ce jour-là","that day"]],
+[["Je ___ quand tu as appelé. (lire)","lisais","background action"],["Quand il est arrivé, nous ___ tout de suite. (partir)","sommes partis","a single event"]]],
+["B1","Le futur simple et la condition probable","Futur simple = infinitive + -ai, -as, -a, -ons, -ez, -ont (je parlerai, je finirai; -re verbs drop the e: je prendrai). Irregular stems: ser- (être), aur- (avoir), ir- (aller), fer- (faire), pourr-, voudr-, devr-, viendr-, verr-, saur-. For a likely condition: si + présent, then futur: si tu viens, on ira au marché. After quand about the future French uses the futur too.",
+[["L'année prochaine, je passerai le TCF.","Next year I'll take the TCF."],["Si j'ai le temps, je t'appellerai ce soir.","If I have time, I'll call you tonight."],["Quand tu seras à Montréal, tu verras la différence.","When you're in Montreal, you'll see the difference."]],
+[["l'année prochaine","next year"],["un projet","a plan, a project"],["réussir","to succeed, to pass"],["un objectif","a goal"],["bientôt","soon"],["l'avenir","the future (m)"]],
+[["Nous ___ prêts demain. (être)","serons",""],["Si tu travailles, tu ___. (réussir)","réussiras",""]]],
+["B1","Le conditionnel présent","Same stem as the futur + imparfait endings: je voudrais, tu pourrais, il faudrait. Uses: politeness (Pourriez-vous m'aider ?), wishes (J'aimerais voyager), advice (Tu devrais dormir plus) and unlikely hypotheses with si + imparfait: si j'avais plus de temps, je lirais davantage.",
+[["Je voudrais prendre rendez-vous, s'il vous plaît.","I'd like to make an appointment, please."],["À ta place, je parlerais à ton manager.","If I were you, I'd talk to your manager."],["Si nous habitions à Paris, nous irions au musée chaque semaine.","If we lived in Paris we'd go to the museum every week."]],
+[["prendre rendez-vous","to make an appointment"],["à ta place","if I were you"],["un conseil","a piece of advice"],["devoir","must, should"],["pouvoir","can, to be able to"],["volontiers","gladly"]],
+[["Tu ___ te reposer. (devoir)","devrais",""],["Si j'étais riche, j'___ une maison. (acheter)","achèterais","si + imparfait, then conditionnel"]]],
+["B1","Les pronoms relatifs qui, que, où, dont","Qui is the subject (la femme qui parle). Que, qu' is the direct object (le livre que je lis). Où is for place or time (la ville où je suis née, le jour où …). Dont replaces de + noun: le film dont je parle (parler de), la personne dont le frère …",
+[["C'est une collègue qui travaille à Montréal.","She's a colleague who works in Montreal."],["Le livre que tu m'as prêté est passionnant.","The book you lent me is fascinating."],["Voilà l'appli dont je t'ai parlé.","Here's the app I told you about."]],
+[["prêter","to lend"],["passionnant, passionnante","fascinating"],["avoir besoin de","to need"],["un, une collègue","a colleague"],["se souvenir de","to remember"],["une appli","an app"]],
+[["C'est le restaurant ___ nous avons dîné.","où",""],["C'est un outil ___ j'ai besoin.","dont","avoir besoin de"]]],
+["B1","Le subjonctif présent","Use it after necessity, will, emotion and doubt when the subject changes: il faut que, je veux que, je suis contente que, j'ai peur que. Form: take the ils form of the present, drop -ent, add -e, -es, -e, -ions, -iez, -ent (ils finissent gives que je finisse). Key irregulars: que je sois, que j'aie, que j'aille, que je fasse, que je puisse, que je sache, que je veuille.",
+[["Il faut que tu sois à l'heure demain.","You must be on time tomorrow."],["Je veux que vous fassiez cet exercice.","I want you to do this exercise."],["Je suis ravie que tu puisses venir.","I'm delighted you can come."]],
+[["il faut que","it is necessary that"],["ravi, ravie","delighted"],["avoir peur que","to fear that"],["à l'heure","on time"],["il est important que","it's important that"],["souhaiter","to wish"]],
+[["Il faut que nous ___ tôt. (partir)","partions",""],["Je veux que tu ___ attention. (faire)","fasses",""]]],
+["B1","Le plus-que-parfait et le discours rapporté","Plus-que-parfait = avoir or être in the imparfait + participle, for an action before another past action: quand je suis arrivée, le film avait commencé. In reported speech after a past verb, tenses shift back: présent to imparfait, passé composé to plus-que-parfait, futur to conditionnel. Il a dit : « Je viens » becomes il a dit qu'il venait.",
+[["Elle m'a dit qu'elle avait perdu ses clés.","She told me she had lost her keys."],["Il a expliqué qu'il viendrait plus tard.","He explained he would come later."],["Nous étions fatigués parce que nous avions marché toute la journée.","We were tired because we had walked all day."]],
+[["expliquer","to explain"],["annoncer","to announce"],["perdre","to lose"],["affirmer","to state, to claim"],["demander si","to ask whether"],["répondre que","to reply that"]],
+[["Il a dit qu'il ___ malade. (être)","était","présent becomes imparfait"],["Quand je suis arrivé, ils ___. (partir, plus-que-parfait)","étaient partis","partir takes être"]]],
+["B1","Donner son opinion et relier ses idées","The TCF rewards connectors. Opinion: à mon avis, selon moi, je pense que, il me semble que. Cause: parce que, car, puisque, grâce à (positive), à cause de (negative). Consequence: donc, c'est pourquoi, alors. Opposition: mais, cependant, par contre, alors que. Adding: de plus, en outre, d'ailleurs. Careful: je ne pense pas que takes the subjonctif.",
+[["À mon avis, le télétravail présente plus d'avantages que d'inconvénients.","In my opinion remote work has more advantages than drawbacks."],["Je ne pense pas que ce soit une bonne idée.","I don't think it's a good idea."],["Il pleuvait, c'est pourquoi le match a été annulé.","It was raining, which is why the match was cancelled."]],
+[["à mon avis","in my opinion"],["cependant","however"],["grâce à","thanks to"],["à cause de","because of"],["un avantage","an advantage"],["un inconvénient","a drawback"]],
+[["Je ne crois pas qu'il ___ raison. (avoir)","ait","negative opinion takes the subjonctif"],["Il a réussi ___ son travail. (thanks to)","grâce à",""]]],
+["B1","Le gérondif et le participe présent","Gérondif = en + nous stem + -ant (en parlant, en faisant). It shows two actions at once or the way something is done: j'apprends le français en écoutant des podcasts. Irregular: étant, ayant, sachant. Without en, the participe présent belongs to written style and often replaces qui: les candidats ayant réussi = qui ont réussi.",
+[["Elle chante en cuisinant.","She sings while cooking."],["C'est en forgeant qu'on devient forgeron.","Practice makes perfect. (proverb)"],["En arrivant à la gare, j'ai vu mon ancien professeur.","On arriving at the station I saw my former teacher."]],
+[["en même temps","at the same time"],["un podcast","a podcast"],["progresser","to improve"],["s'entraîner","to practise, to train"],["ancien, ancienne","former"],["un proverbe","a proverb"]],
+[["J'ai appris l'anglais en ___ des séries. (regarder)","regardant",""],["Il s'est blessé en ___ du sport. (faire)","faisant",""]]],
+
+["B2","Le subjonctif après conjonctions et doute","Some conjunctions always take the subjonctif: bien que, quoique (although), pour que, afin que (so that), avant que, à moins que, sans que, jusqu'à ce que. So do doubt and possibility: je doute que, il est possible que, il se peut que. Après que takes the indicative in standard French. With the same subject, use an infinitive: pour réussir, avant de partir.",
+[["Bien qu'il soit fatigué, il continue à travailler.","Although he's tired he keeps working."],["Je t'explique pour que tu comprennes.","I'm explaining so that you understand."],["Il se peut que la réunion soit reportée.","The meeting may be postponed."]],
+[["bien que","although"],["afin que","so that"],["à moins que","unless"],["reporter","to postpone"],["il se peut que","it may be that"],["jusqu'à ce que","until"]],
+[["Partons avant qu'il ___. (pleuvoir)","pleuve",""],["Bien qu'elle ___ peu de temps, elle nous aide. (avoir)","ait",""]]],
+["B2","Le conditionnel passé et l'irréel du passé","Conditionnel passé = avoir or être in the conditionnel + participle: j'aurais aimé, nous serions partis. Uses: regret (j'aurais dû étudier plus), unconfirmed news (le ministre aurait démissionné = reportedly resigned) and the unreal past: si + plus-que-parfait, conditionnel passé: si j'avais su, je serais venue.",
+[["Si j'avais commencé plus tôt, j'aurais déjà le niveau B2.","If I'd started earlier I'd already be at B2."],["Tu aurais dû me prévenir.","You should have warned me."],["Selon la presse, l'incendie aurait fait trois blessés.","According to the press the fire reportedly injured three people."]],
+[["regretter","to regret"],["prévenir","to warn, to let know"],["selon","according to"],["un blessé","an injured person"],["démissionner","to resign"],["si j'avais su","had I known"]],
+[["Si tu m'avais appelé, je ___. (venir)","serais venu|serais venue",""],["J'___ partir plus tôt. (devoir, regret)","aurais dû",""]]],
+["B2","La voix passive et les tournures impersonnelles","Passive = être in any tense + a participle that agrees with the subject; the agent comes with par: la loi a été votée par le Parlement. French often prefers on (on a construit un pont) or a pronominal verb (ce plat se mange froid). Impersonal phrases: il est nécessaire de, il reste, il s'agit de, il est question de.",
+[["Le pont a été construit en 1930.","The bridge was built in 1930."],["Les résultats seront publiés la semaine prochaine.","Results will be published next week."],["Il s'agit d'un problème complexe.","It's a complex problem."]],
+[["construire","to build"],["publier","to publish"],["voter une loi","to pass a law"],["il s'agit de","it is about"],["une enquête","a survey, an investigation"],["mener","to lead, to conduct"]],
+[["Les candidats ___ à 9 h. (convoquer, passé composé passif)","ont été convoqués",""],["Cette enquête a été menée ___ des chercheurs.","par",""]]],
+["B2","Les pronoms relatifs composés","After a preposition, use lequel, laquelle, lesquels, lesquelles for things (qui is fine for people): l'outil avec lequel je travaille. À + lequel gives auquel, auxquels, auxquelles; de + lequel gives duquel, used after compound prepositions: le parc près duquel j'habite. Ce qui, ce que, ce dont mean 'what' (the thing that).",
+[["C'est la raison pour laquelle j'ai démissionné.","That's the reason why I resigned."],["Les projets auxquels je participe sont passionnants.","The projects I take part in are exciting."],["Ce dont j'ai besoin, c'est de temps.","What I need is time."]],
+[["une raison","a reason"],["participer à","to take part in"],["à côté de","next to"],["grâce auquel","thanks to which"],["ce qui","what (subject)"],["ce que","what (object)"]],
+[["C'est l'entreprise pour ___ je travaille.","laquelle","entreprise is feminine"],["Je ne comprends pas ___ tu veux dire.","ce que",""]]],
+["B2","Nuancer l'opposition et la concession","Go beyond mais: pourtant, néanmoins, toutefois (however), en revanche (on the other hand), alors que, tandis que (whereas), malgré + noun (despite), même si + indicative, quand bien même + conditionnel (even if). An essay concession: Certes …, mais … or Il est vrai que …, néanmoins …",
+[["Certes, les réseaux sociaux rapprochent les gens, mais ils peuvent aussi les isoler.","Admittedly social media brings people together, but it can also isolate them."],["Malgré la pluie, la course a eu lieu.","Despite the rain, the race went ahead."],["Elle aime la ville, tandis que son mari préfère la campagne.","She loves the city whereas her husband prefers the countryside."]],
+[["certes","admittedly"],["néanmoins","nevertheless"],["en revanche","on the other hand"],["malgré","despite"],["tandis que","whereas"],["avoir lieu","to take place"]],
+[["___ ses efforts, il n'a pas réussi. (despite)","malgré",""],["Il est riche ; ___, il vit simplement. (yet)","pourtant|néanmoins|toutefois|cependant",""]]],
+["B2","Structurer un texte argumentatif (TCF tâche 3)","Writing task 3 gives two short documents with opposing views. Plan it: (1) one neutral sentence introducing the debate, (2) summarise view A and view B in your own words, about 40 words in all, (3) give your opinion with one argument and one example. Signposts: d'une part … d'autre part, selon le premier document, en revanche, le second …, pour ma part, en conclusion.",
+[["Le premier document souligne les avantages du télétravail.","The first document highlights the benefits of remote work."],["Le second, en revanche, insiste sur l'isolement des salariés.","The second, by contrast, stresses employees' isolation."],["Pour ma part, je suis favorable à un modèle hybride.","For my part, I'm in favour of a hybrid model."]],
+[["souligner","to underline, to highlight"],["insister sur","to stress"],["être favorable à","to be in favour of"],["un point de vue","a point of view"],["d'une part, d'autre part","on the one hand, on the other"],["en conclusion","in conclusion"]],
+[["___ ma part, je pense que … (for)","pour",""],["Le second document, en ___, critique cette idée. (by contrast)","revanche",""]]],
+["B2","La nominalisation","Turning verbs and adjectives into nouns makes writing denser and more formal, as in headlines and B2 essays: augmenter gives l'augmentation, choisir gives le choix, développer gives le développement, réduire gives la réduction, lent gives la lenteur. Les prix augmentent becomes l'augmentation des prix.",
+[["La réduction des déchets est une priorité.","Reducing waste is a priority."],["Le gouvernement a annoncé la fermeture des écoles.","The government announced school closures."],["La lenteur de l'administration décourage les usagers.","Slow bureaucracy discourages users."]],
+[["l'augmentation","increase (f)"],["la baisse","decrease"],["le développement","development"],["la fermeture","closure"],["les déchets","waste (m)"],["un usager","a user (of a service)"]],
+[["choisir : le ___","choix",""],["réduire : la ___","réduction",""]]],
+["B2","L'hypothèse et la condition nuancées","Beyond si: à condition que + subjonctif (provided that), au cas où + conditionnel (in case), en cas de + noun, pourvu que + subjonctif, à supposer que + subjonctif, sinon (otherwise). Au cas où tu aurais besoin de moi, appelle-moi.",
+[["J'accepte, à condition que tu m'aides.","I accept, provided you help me."],["Prends un parapluie au cas où il pleuvrait.","Take an umbrella in case it rains."],["En cas de retard, prévenez l'accueil.","If you're late, let reception know."]],
+[["à condition que","provided that"],["au cas où","in case"],["en cas de","in the event of"],["sinon","otherwise"],["pourvu que","as long as, let's hope"],["l'accueil","reception (m)"]],
+[["Je viendrai à condition que tu ___ là. (être)","sois",""],["Garde mon numéro au cas où tu en ___ besoin. (avoir)","aurais",""]]],
+
+["C1","Le subjonctif passé et la concordance","Subjonctif passé = avoir or être in the subjonctif + participle, for an action completed before the main verb: je suis content que tu aies réussi, je regrette qu'elle soit partie. Choose present or past subjonctif by the time relation between the two actions, not by the tense of the main verb.",
+[["Je suis ravie que vous ayez accepté notre proposition.","I'm delighted you've accepted our proposal."],["Bien qu'il soit arrivé en retard, il a pu passer l'examen.","Although he arrived late he could sit the exam."],["C'est le meilleur film que j'aie jamais vu.","It's the best film I have ever seen."]],
+[["une proposition","an offer, a proposal"],["regretter que","to regret that"],["douter que","to doubt that"],["à peine","barely"],["le seul … que","the only … that"],["jamais","ever, never"]],
+[["Je doute qu'il ___ avant hier. (finir, subjonctif passé)","ait fini",""],["Je regrette que tu ___ si tôt hier. (partir, subjonctif passé)","sois parti|sois partie",""]]],
+["C1","Les registres de langue","C1 means choosing a register on purpose. Familier: t'inquiète, c'est relou, bosser, une bagnole. Courant: ne t'inquiète pas, c'est pénible, travailler, une voiture. Soutenu: ne vous inquiétez point, c'est fâcheux, œuvrer, un véhicule. In TCF writing aim for courant to soutenu; in speaking task 2 match the situation you are given.",
+[["J'ai trop la flemme d'y aller.","I really can't be bothered to go. (familier)"],["Je n'ai vraiment pas envie d'y aller.","I really don't want to go. (courant)"],["Je n'éprouve guère l'envie de m'y rendre.","I hardly feel inclined to go there. (soutenu)"]],
+[["bosser","to work (familier)"],["la flemme","laziness (familier)"],["fâcheux, fâcheuse","unfortunate (soutenu)"],["se rendre","to go (soutenu)"],["guère","hardly (soutenu)"],["éprouver","to feel, to experience"]],
+[["Une bagnole (familier) = une ___ (courant)","voiture",""],["Bosser (familier) = ___ (courant)","travailler",""]]],
+["C1","La mise en relief","Emphasis structures: c'est … qui, c'est … que (c'est Paul qui a gagné); ce qui …, c'est … (ce qui m'étonne, c'est son calme); ce que …, c'est … (ce que je veux, c'est comprendre); and in speech, dislocation: le français, je l'adore. They make speaking task 3 sound natural and well argued.",
+[["Ce qui compte, c'est la régularité.","What matters is consistency."],["C'est en pratiquant chaque jour qu'on progresse.","It's by practising every day that you improve."],["La grammaire, je la trouve fascinante.","Grammar, I find it fascinating."]],
+[["la régularité","consistency"],["compter","to matter"],["étonner","to surprise"],["ce qui me frappe","what strikes me"],["un enjeu","what is at stake, an issue"],["primordial, primordiale","essential"]],
+[["___ me plaît, c'est l'ambiance.","ce qui",""],["___ je regrette, c'est de ne pas avoir commencé plus tôt.","ce que",""]]],
+["C1","Modaliser : nuance et prudence","Advanced speakers hedge. Certainty: il est indéniable que, sans aucun doute. Probability: il est probable que + indicatif, il semblerait que + subjonctif, vraisemblablement, a priori. Distance: d'après certains, prétendument. Softening: dans une certaine mesure, plus ou moins, en quelque sorte.",
+[["Il semblerait que les habitudes de consommation aient changé.","It would seem consumer habits have changed."],["Dans une certaine mesure, cette décision est justifiée.","To some extent this decision is justified."],["Il est indéniable que l'IA transforme le marché du travail.","AI is undeniably transforming the job market."]],
+[["indéniable","undeniable"],["vraisemblablement","in all likelihood"],["dans une certaine mesure","to some extent"],["a priori","at first sight"],["prétendument","allegedly"],["une tendance","a trend"]],
+[["Il semblerait que la situation ___. (s'améliorer, subjonctif)","s'améliore",""],["Il est ___ que … (undeniable)","indéniable",""]]],
+["C1","Participes et accords avancés","The compound participle (ayant fini, étant parti) shows that one action came first, in formal writing: ayant terminé son rapport, elle est partie. With avoir, the participle agrees with a direct object placed before it: les lettres que j'ai écrites. Pronominal verbs agree with their direct object: elle s'est lavée, but elle s'est lavé les mains (the object comes after).",
+[["Ayant obtenu son visa, il a réservé son billet.","Having got his visa, he booked his ticket."],["Les décisions qu'ils ont prises sont discutables.","The decisions they made are debatable."],["Elles se sont parlé pendant des heures.","They talked to each other for hours."]],
+[["obtenir","to obtain"],["discutable","debatable"],["prendre une décision","to make a decision"],["réserver","to book"],["une démarche","a procedure, a step"],["aboutir","to lead to, to succeed"]],
+[["La robe qu'elle a ___ est rouge. (choisir)","choisie",""],["___ fini le travail, ils sont sortis.","ayant",""]]],
+["C1","Les expressions idiomatiques","Idioms show a natural command of French, but use them sparingly and exactly. Learn each one inside a full sentence, with its register.",
+[["Il ne faut pas mettre la charrue avant les bœufs.","Don't put the cart before the horse."],["Ce projet, c'est la goutte d'eau qui fait déborder le vase.","That project is the last straw."],["Elle a pris son courage à deux mains et elle a démissionné.","She plucked up her courage and resigned."]],
+[["avoir du pain sur la planche","to have a lot on your plate"],["poser un lapin","to stand someone up"],["coûter les yeux de la tête","to cost an arm and a leg"],["tomber des nues","to be astounded"],["être dans la lune","to daydream"],["mettre les points sur les i","to make things crystal clear"]],
+[["J'ai beaucoup de travail : j'ai du pain sur la ___.","planche",""],["Ce sac coûte les yeux de la ___.","tête",""]]],
+["C1","Reformuler et synthétiser","C1 tasks reward reformulation: never copy the document. Change the structure (a verb becomes a noun), use synonyms and synthesis connectors: autrement dit, en d'autres termes, il en ressort que, l'auteur met en avant, dénonce, nuance. Keep the author's view clearly separate from yours.",
+[["Autrement dit, la ville doit repenser ses transports.","In other words, the city must rethink its transport."],["Il en ressort que les jeunes lisent moins la presse papier.","It emerges that young people read fewer print newspapers."],["L'auteur dénonce une précarité croissante.","The author condemns growing job insecurity."]],
+[["autrement dit","in other words"],["il en ressort que","it emerges that"],["mettre en avant","to highlight"],["dénoncer","to denounce, to condemn"],["croissant, croissante","growing"],["la précarité","insecurity, precariousness"]],
+[["___ dit, il faut agir vite. (in other words)","autrement",""],["Il en ___ que la mesure est efficace.","ressort",""]]],
+
+["C2","Le passé simple et les temps littéraires","You won't write them in the TCF, but C2 reading expects you to recognise them instantly. Passé simple: il parla, elle finit, ils prirent, il fut, il eut, il vint. Subjonctif imparfait (rare, literary): qu'il fût, qu'il eût, qu'il fît. In literary narrative they replace the passé composé and the subjonctif présent.",
+[["Elle ouvrit la porte et resta immobile.","She opened the door and stood still."],["Ils vinrent nous voir au printemps.","They came to see us in spring."],["Il fallait qu'il fût présent.","He had to be present. (literary)"]],
+[["il fut","he was (passé simple)"],["il eut","he had"],["ils firent","they did"],["elle vint","she came"],["il dit","he said"],["ils surent","they knew, they found out"]],
+[["« Il fut » est le passé simple de ___.","être",""],["« Ils prirent » vient du verbe ___.","prendre",""]]],
+["C2","Le ne explétif et les inversions","Formal French adds a ne with no negative meaning after verbs of fear, avant que, à moins que and unequal comparisons: je crains qu'il ne pleuve; il est plus tard que je ne pensais. Inversion follows à peine, peut-être, sans doute and ainsi at the start of a sentence: à peine fut-il arrivé qu'il repartit; peut-être viendra-t-elle.",
+[["Je crains qu'il ne soit trop tard.","I fear it may be too late."],["Sans doute a-t-il raison.","He is probably right."],["Le projet est plus complexe qu'on ne le croit.","The project is more complex than people think."]],
+[["craindre","to fear"],["à peine … que","hardly … when"],["sans doute","probably"],["ainsi","thus"],["de crainte que","for fear that"],["éviter que","to avoid (+ ne)"]],
+[["Peut-être ___-t-elle demain. (venir, futur)","viendra",""],["Sans doute ___-t-il raison. (avoir, présent)","a",""]]],
+["C2","Paronymes et faux amis","Precision at C2 means avoiding near-misses. Paronyms: éminent / imminent, conjecture / conjoncture, effraction / infraction, perpétrer / perpétuer. False friends for English speakers: actuellement (currently), éventuellement (possibly), sensible (sensitive), une librairie (a bookshop), assister à (to attend), une location (a rental).",
+[["Actuellement, je travaille à distance.","Currently I work remotely."],["La conjoncture économique est difficile.","The economic situation is difficult."],["J'ai assisté à une conférence passionnante.","I attended a fascinating conference."]],
+[["actuellement","currently"],["éventuellement","possibly"],["sensible","sensitive"],["la conjoncture","the economic situation"],["assister à","to attend"],["une librairie","a bookshop"]],
+[["Je vais ___ à une réunion. (to attend)","assister",""],["« Currently » se dit ___.","actuellement|en ce moment",""]]],
+["C2","Figures de style et rhétorique","Recognise and use: la litote (ce n'est pas mauvais = it's very good), l'euphémisme (il nous a quittés), l'hyperbole, l'antithèse, l'anaphore (repeating an opening word for force) and the rhetorical question. In speaking task 3 a well-placed rhetorical question or anaphore shows range.",
+[["Va, je ne te hais point.","Go, I do not hate you at all, meaning: I love you. (litote, Corneille)"],["Il nous a quittés l'an dernier.","He passed away last year. (euphemism)"],["Faut-il vraiment sacrifier la qualité au profit de la vitesse ?","Must we really sacrifice quality for speed?"]],
+[["une litote","an understatement"],["un euphémisme","a euphemism"],["une hyperbole","an exaggeration"],["une antithèse","an antithesis"],["une anaphore","an anaphora"],["au profit de","for the benefit of"]],
+[["« Ce n'est pas bête » pour dire « c'est intelligent » est une ___.","litote",""],["« Je meurs de faim » est une ___.","hyperbole",""]]],
+["C2","La cohésion avancée","Fine-grained connectors: or (yet, now: introduces a decisive fact), en effet (indeed, explaining), dès lors (from then on, therefore), par conséquent, ainsi, il n'en demeure pas moins que (the fact remains that), quitte à (even if it means), faute de (for lack of), sous réserve de (subject to).",
+[["Tout le monde veut réduire la pollution. Or, personne ne veut renoncer à sa voiture.","Everyone wants to cut pollution. Yet no one wants to give up their car."],["Il n'en demeure pas moins que la mesure reste impopulaire.","The fact remains that the measure is still unpopular."],["Faute de moyens, le projet a été abandonné.","For lack of funds the project was dropped."]],
+[["or","yet, now (logic)"],["dès lors","from then on, therefore"],["faute de","for lack of"],["quitte à","even if it means"],["sous réserve de","subject to"],["renoncer à","to give up"]],
+[["___ de temps, je n'ai pas pu finir. (for lack)","faute",""],["Il n'en ___ pas moins que …","demeure",""]]],
+["C2","Argumenter à l'oral avec aisance","C2 speaking is spontaneous and nuanced. Buy time naturally (c'est une question délicate, comment dire …), concede before you rebut (je vous accorde que …, mais …), challenge (je ne suis pas tout à fait d'accord), reformulate the other side (si je vous comprends bien …) and close with a wider view (au fond, la vraie question est …).",
+[["Je vous accorde que le coût est élevé, mais l'investissement est rentable à long terme.","I grant you the cost is high, but the investment pays off in the long run."],["Si je vous comprends bien, vous proposez de tout centraliser ?","If I understand you correctly, you suggest centralising everything?"],["Au fond, la vraie question est celle de la confiance.","Ultimately, the real question is one of trust."]],
+[["je vous accorde que","I grant you that"],["rentable","profitable, worthwhile"],["à long terme","in the long run"],["au fond","fundamentally"],["délicat, délicate","tricky, delicate"],["la confiance","trust"]],
+[["Je vous ___ que c'est cher, mais …","accorde",""],["Si je vous comprends ___, …","bien",""]]],
+["C2","Le mot juste","Replace all-purpose verbs. Faire: effectuer (une démarche), réaliser (un projet), commettre (une erreur). Dire: affirmer, souligner, préciser, avouer. Avoir: disposer de, posséder, bénéficier de. Mettre: placer, instaurer (une règle), consacrer (du temps). Il y a: on observe, on constate, il existe.",
+[["L'entreprise a instauré de nouvelles règles.","The company introduced new rules."],["Les participants bénéficient d'un accompagnement personnalisé.","Participants receive personalised support."],["Elle a consacré deux ans à ce projet.","She devoted two years to this project."]],
+[["effectuer","to carry out"],["instaurer","to establish, to introduce"],["disposer de","to have available"],["bénéficier de","to benefit from"],["consacrer","to devote"],["constater","to note, to observe"]],
+[["Il a fait une erreur : il a ___ une erreur.","commis",""],["On a mis en place une règle : on a ___ une règle.","instauré",""]]]
+];
+const UNITS=[];const CNT={};
+RAW.forEach(([lv,t,g,ex,v,q])=>{CNT[lv]=(CNT[lv]||0)+1;UNITS.push({id:lv.toLowerCase()+'-'+CNT[lv],n:CNT[lv],lv,t,g,ex,v,q})});
+const uH=u=>(END[u.lv]-prevEnd(u.lv))/CNT[u.lv];
+
+/* ---------- SOUNDS ---------- */
+const SND=[
+["Vowels","i","i, y","Smile wide, tongue high and forward. Short and tense, never the 'ih' of English 'bit'.",["lit","midi","stylo"]],
+["Vowels","y","u, û","Say 'ee', then round your lips tightly without moving your tongue. The sound English does not have.",["tu","rue","sur","vu"]],
+["Vowels","u","ou","Lips rounded and pushed forward, tongue pulled back: a tighter 'oo'.",["vous","roue","tout","jour"]],
+["Vowels","e","é, -er, -ez","A closed 'ay' with no glide at the end. Lips spread, jaw nearly shut.",["été","parler","nez"]],
+["Vowels","ɛ","è, ê, ai","The open 'e' of English 'bed', held steady.",["mère","fête","lait","merci"]],
+["Vowels","ə","unstressed e","Short and relaxed, often dropped in speech: petit sounds like p'tit.",["le","petit","demain"]],
+["Vowels","ø","eu, œu (closed)","Lips rounded for 'oo', tongue placed for 'ay'.",["deux","peu","bleu"]],
+["Vowels","œ","eu, œu (open)","Like the closed eu but more open, usually before a pronounced consonant.",["peur","fleur","sœur"]],
+["Vowels","o","o, au, eau, ô","Closed and rounded, with no 'w' glide at the end.",["beau","mot","haut"]],
+["Vowels","ɔ","o + consonant","An open o, rounder than British 'hot'.",["porte","sol","école"]],
+["Nasal vowels","ɑ̃","an, am, en, em","Say 'ah' and let air flow through your nose. Never add an n or ng at the end.",["vent","temps","enfant","chambre"]],
+["Nasal vowels","ɔ̃","on, om","Round your lips as for 'o' and send the air through your nose.",["bon","nom","pont","monde"]],
+["Nasal vowels","ɛ̃","in, im, ain, ein, un","Spread lips as for è, air through the nose. Most speakers say un the same way.",["vin","pain","faim","lundi"]],
+["Consonants","ʁ","r","Made at the back of the throat, like a soft gargle. Keep the tip of your tongue down behind your lower teeth.",["rouge","Paris","très","merci"]],
+["Consonants","ʒ","j, g + e/i","The 's' in English 'measure'.",["je","rouge","girafe","déjà"]],
+["Consonants","ʃ","ch","English 'sh'.",["chat","chercher","riche"]],
+["Consonants","ɲ","gn","Like 'ny' in 'canyon'.",["montagne","gagner","signe"]],
+["Consonants","j","ill, il, y","A quick 'y'.",["fille","travail","soleil","payer"]],
+["Consonants","ɥ","ui","Start from the French u and glide fast to i.",["huit","nuit","lui","juillet"]],
+["Consonants","p t k","p, t, c","No puff of air after them, unlike English. Hold a tissue in front of your mouth: it should barely move.",["papa","table","café"]]];
+const RULES=[
+["Silent endings","Most final consonants are silent: petit, grand, vous, ils parlent. C, R, F and L are often pronounced (think CaReFuL): sac, mer, chef, sel, but not the r of -er verbs.",["petit","grand","ils parlent","le sac","la mer","le chef"]],
+["Liaison","A silent final consonant is pronounced before a word that starts with a vowel or silent h. S and x then sound like z.",["les amis","vous avez","un enfant","deux heures","ils ont"]],
+["No liaison","Never after et, never before an aspirated h, never after a singular noun.",["Paul et Anne","les héros","un étudiant anglais"]],
+["Enchaînement","A pronounced final consonant runs on into the next vowel, so the words flow together.",["elle arrive","une amie","avec elle","il habite ici"]],
+["Rhythm","French stresses the last syllable of each word group. Keep every other syllable even; don't hit the start of words.",["C'est une idée excellente.","Je voudrais un café, s'il vous plaît."]],
+["Intonation","Yes/no questions rise at the end; statements fall; questions with a question word start high and fall.",["Tu viens ?","Tu viens.","Où est-ce que tu vas ?"]]];
+const PAIRS=[["tu","tout","y / u"],["rue","roue","y / u"],["dessus","dessous","y / u"],["lit","lu","i / y"],["deux","des","ø / e"],["le","les","ə / e"],["peur","père","œ / ɛ"],["vin","vent","ɛ̃ / ɑ̃"],["bon","banc","ɔ̃ / ɑ̃"],["pain","pont","ɛ̃ / ɔ̃"],["beau","bon","o / ɔ̃"],["poisson","poison","s / z"],["coussin","cousin","s / z"],["chou","joue","ʃ / ʒ"],["sous","su","u / y"]];
+
+/* ---------- LISTENING, READING ---------- */
+const LIS=[
+["A1","Bonjour madame. Je voudrais un café et un croissant, s'il vous plaît. Voilà. Ça fait trois euros cinquante.","Combien coûte la commande ?",["2,50 €","3,50 €","3,15 €","13,50 €"],1],
+["A1","Le train à destination de Lyon partira du quai numéro sept à dix heures quinze.","De quel quai part le train ?",["Quai 2","Quai 7","Quai 17","Quai 10"],1],
+["A2","Allô, c'est Marc. Je suis désolé, je vais arriver en retard ce soir, il y a beaucoup de circulation. Commencez à manger sans moi, j'arrive vers vingt heures trente.","Que demande Marc ?",["D'annuler le dîner","De commencer sans lui","De venir le chercher","De rappeler plus tard"],1],
+["A2","Cette semaine, il fera beau dans le sud, mais il pleuvra dans le nord jusqu'à jeudi. Le week-end, les températures baisseront partout.","Quel temps fera-t-il dans le nord ?",["Du soleil","De la pluie jusqu'à jeudi","De la neige","Très chaud"],1],
+["B1","Mesdames et messieurs, en raison de travaux, la ligne quatre du métro sera fermée ce week-end entre les stations Gare du Nord et Châtelet. Des bus de remplacement seront mis à la disposition des voyageurs.","Que se passe-t-il ce week-end ?",["La ligne est gratuite","Une partie de la ligne est fermée","Les bus sont en grève","Toute la gare est fermée"],1],
+["B1","Moi, j'ai choisi de travailler quatre jours par semaine. Je gagne un peu moins, c'est vrai, mais j'ai enfin du temps pour mes enfants et pour le sport. Je ne reviendrais pas en arrière.","Quel est l'avis de cette personne ?",["Elle regrette son choix","Elle est satisfaite malgré le salaire","Elle veut travailler plus","Elle n'a pas d'enfants"],1],
+["B2","Selon une enquête récente, près d'un Français sur trois déclare avoir réduit sa consommation de viande au cours de l'année écoulée. Les raisons invoquées sont d'abord économiques, avant les préoccupations environnementales ou de santé.","Quelle est la première raison citée ?",["La santé","L'environnement","Le prix","Le goût"],2],
+["C1","Ce qu'on appelle aujourd'hui la sobriété numérique ne consiste pas tant à renoncer aux technologies qu'à en interroger l'usage : a-t-on réellement besoin de changer de téléphone tous les deux ans ? La question est moins technique que culturelle.","Pour l'intervenant, la sobriété numérique est surtout …",["un renoncement total","une question technique","une remise en question culturelle de nos usages","une mode passagère"],2],
+["C2","On a souvent opposé la mémoire et l'oubli comme le bien et le mal. C'est méconnaître que l'oubli est la condition même de la mémoire : se souvenir de tout reviendrait à ne plus rien pouvoir hiérarchiser, donc à ne plus penser.","Pour l'orateur, l'oubli est …",["un mal à combattre","nécessaire à la mémoire","sans rapport avec la pensée","un signe de vieillesse"],1]];
+const READ=[
+["A1","Une présentation","Bonjour ! Je m'appelle Léa. J'ai vingt-cinq ans et j'habite à Lyon avec mon frère. Je travaille dans une banque. Le week-end, j'aime courir au parc et cuisiner avec mes amis. Le dimanche soir, nous regardons un film ensemble.",
+[["Où habite Léa ?",["À Paris","À Lyon","À Lille","À Nice"],1],["Que fait Léa le week-end ?",["Elle travaille","Elle court et cuisine","Elle voyage","Elle étudie"],1]]],
+["A2","Un message","Salut Karim, je suis désolée, je ne peux pas venir à ton anniversaire samedi. Ma mère est arrivée hier de Dakar et elle reste chez moi jusqu'à mardi. On pourrait déjeuner ensemble la semaine prochaine ? Je t'invite ! Bises, Nadia",
+[["Pourquoi Nadia ne vient-elle pas ?",["Elle est malade","Elle travaille","Sa mère lui rend visite","Elle part à Dakar"],2],["Que propose-t-elle ?",["Un déjeuner la semaine prochaine","Une fête mardi","Un voyage","Un appel samedi"],0]]],
+["B1","Une annonce","Depuis le mois de septembre, la bibliothèque municipale propose des ateliers de conversation gratuits pour les adultes qui apprennent le français. Les séances ont lieu le mercredi de 18 h à 19 h 30. Il n'est pas nécessaire de s'inscrire, mais le nombre de places est limité à quinze personnes. Les participants sont encouragés à apporter un objet ou une photo pour lancer la discussion.",
+[["Pour participer, il vaut mieux …",["s'inscrire en ligne","payer à l'entrée","arriver tôt, car les places sont limitées","être débutant"],2],["Que recommande-t-on d'apporter ?",["Un dictionnaire","Un objet ou une photo","Un repas","Un cahier"],1]]],
+["B2","Un article","Le télétravail, longtemps présenté comme une parenthèse liée à la crise sanitaire, s'est installé durablement dans de nombreuses entreprises. Si les salariés apprécient le temps gagné sur les trajets, plusieurs études pointent un effet moins visible : l'affaiblissement des liens informels entre collègues. Or ces échanges spontanés, autour d'un café ou dans un couloir, jouent un rôle clé dans la transmission des savoirs, notamment pour les nouveaux arrivants. Certaines entreprises tentent donc de réinventer ces moments en imposant des journées de présence communes plutôt qu'un nombre fixe de jours au bureau.",
+[["Selon le texte, quel est le risque principal ?",["Une baisse de productivité","L'affaiblissement des liens informels","Une hausse des coûts","Des pertes d'emplois"],1],["Quelle solution est mentionnée ?",["Supprimer le télétravail","Augmenter les salaires","Des journées de présence communes","Plus de réunions en ligne"],2]]],
+["C1","Un essai","On aurait tort de réduire la lenteur à un simple défaut d'efficacité. Dans une société qui valorise la réactivité immédiate, prendre son temps relève presque de la transgression. Pourtant, nombre de chercheurs rappellent que la réflexion approfondie, l'apprentissage durable et même la créativité exigent des phases d'apparente inactivité. Le paradoxe est saisissant : plus nos outils nous font gagner du temps, moins nous semblons en disposer pour penser.",
+[["Quelle est la thèse de l'auteur ?",["La lenteur est un défaut","La lenteur a une valeur intellectuelle","Les outils numériques sont inutiles","La créativité est rare"],1],["« Le paradoxe » désigne le fait que …",["nos outils nous font gagner du temps, mais nous en avons moins pour penser","les chercheurs sont lents","la société valorise la lenteur","l'inactivité nuit à l'apprentissage"],0]]],
+["C2","Une tribune","Il n'est guère de débat public qui échappe aujourd'hui à la tyrannie du chiffre. Taux, indices et classements s'imposent comme autant de preuves irréfutables, au point que l'on en oublie qu'ils procèdent de choix méthodologiques, et partant, de partis pris. Loin de récuser la mesure, il s'agirait plutôt d'en restituer la part d'interprétation : un indicateur n'est jamais que la réponse à une question qu'on a choisi de poser.",
+[["Quelle position l'auteur défend-il ?",["Il faut abandonner les statistiques","Les chiffres sont neutres","Il faut rappeler la part d'interprétation des chiffres","Les classements sont toujours faux"],2],["Ici, « et partant » signifie …",["et donc","en s'en allant","cependant","autrefois"],0]]]];
+
+/* ---------- TCF WRITING AND SPEAKING ---------- */
+const WT=[
+{n:1,w:[60,120],min:10,t:"Tâche 1 · Message",d:"A short practical message: describe, invite, inform or ask. Informal or formal depending on who you write to.",
+p:["Vous venez d'emménager dans un nouveau quartier. Écrivez un message à un ami ou une amie pour décrire votre logement et l'inviter à venir le voir.","Vous avez acheté en ligne un article qui ne fonctionne pas. Écrivez au service client pour expliquer le problème et demander une solution.","Écrivez à un collègue pour lui proposer une sortie après le travail : date, lieu, activité."],
+c:["Greeting and sign-off that match the person","Every point of the instruction covered","60 to 120 words","Present, passé composé and futur proche used correctly","A question or clear request at the end"]},
+{n:2,w:[120,150],min:20,t:"Tâche 2 · Article ou récit",d:"Tell an experience for a blog, a newspaper or a forum and say what you think of it.",
+p:["Sur un blog de voyageurs, racontez un voyage qui vous a marqué et dites ce que vous en avez retenu.","Pour le journal de votre ville, racontez un événement local récent (festival, marché, course) et donnez votre avis.","Sur un forum, racontez une expérience d'apprentissage difficile et expliquez comment vous l'avez surmontée."],
+c:["A title","Passé composé for events, imparfait for background","At least three connectors (d'abord, ensuite, cependant …)","Your opinion with a reason","120 to 150 words"]},
+{n:3,w:[120,180],min:30,t:"Tâche 3 · Deux documents, votre opinion",d:"Two short documents disagree. Summarise both in your own words (about 40 to 60 words), then give your argued opinion (about 80 to 120 words).",
+p:["Faut-il interdire les téléphones portables à l'école ? Document 1 : moins de distractions, de meilleurs résultats, plus d'échanges entre élèves. Document 2 : un outil pédagogique, un moyen de rester joignable pour les parents, l'occasion d'apprendre un usage responsable.","Le télétravail : progrès ou isolement ? Document 1 : du temps gagné, plus d'autonomie, moins de pollution. Document 2 : de l'isolement, une frontière floue entre vie privée et travail, des liens qui se perdent.","Faut-il rendre les transports en commun gratuits ? Document 1 : bon pour l'écologie et pour le pouvoir d'achat. Document 2 : un coût élevé pour la collectivité, des réseaux saturés, moins d'argent pour l'entretien."],
+c:["Both documents summarised without copying","A clear opinion (pour ma part, selon moi)","Concession: certes … mais …","One concrete example","120 to 180 words in total"]}];
+const ST=[
+{n:1,t:"Tâche 1 · Entretien dirigé",prep:0,talk:120,d:"No preparation. The examiner asks about you; speak in full sentences and develop each answer.",
+p:["Présentez-vous.","Parlez-moi de votre travail ou de vos études.","Pourquoi apprenez-vous le français ?","Que faites-vous pendant votre temps libre ?","Décrivez la ville où vous habitez."],
+ph:["Je m'appelle … et j'ai … ans.","Je travaille comme … depuis …","Ce qui me plaît dans mon travail, c'est …","J'apprends le français parce que …","Le week-end, en général, je …"]},
+{n:2,t:"Tâche 2 · Exercice en interaction",prep:120,talk:210,d:"Two minutes to prepare, then a role-play: you ask the examiner the questions to get what you need. Use vous.",
+p:["Vous voulez vous inscrire dans une salle de sport. Posez des questions à l'employé : horaires, prix, cours, engagement.","Vous cherchez un appartement à louer. Vous appelez l'agence immobilière.","Vous organisez un week-end avec un ami. Discutez du lieu, du transport et du budget.","Vous voulez inscrire un enfant à une activité. Interrogez l'animateur."],
+ph:["Bonjour, je voudrais avoir quelques renseignements sur …","Est-ce que vous pourriez me dire …","Quels sont les horaires d'ouverture ?","Combien est-ce que ça coûte par mois ?","Est-ce qu'il y a un engagement minimum ?","Très bien, je vous remercie pour ces informations."]},
+{n:3,t:"Tâche 3 · Expression d'un point de vue",prep:0,talk:270,d:"Give and defend your opinion on a statement: introduce, argue with two or three points and examples, conclude.",
+p:["Les réseaux sociaux rendent-ils les gens plus seuls ?","Faut-il travailler quatre jours par semaine ?","L'intelligence artificielle va-t-elle remplacer les enseignants ?","Vaut-il mieux vivre en ville ou à la campagne ?","Les voyages forment-ils vraiment la jeunesse ?"],
+ph:["C'est une question qui fait débat.","D'un côté, … De l'autre, …","Personnellement, je pense que …","Prenons l'exemple de …","Certes, …, mais …","Pour conclure, je dirais que …"]}];
+const MOCK=[
+["A1","Je ___ étudiante.",["suis","ai","es","est"],0],["A1","Nous ___ deux enfants.",["sommes","avons","ont","avez"],1],["A1","J'habite ___ Canada.",["en","à","au","aux"],2],
+["A2","Hier, elle ___ au cinéma.",["a allé","est allée","allait","va"],1],["A2","Quand j'étais petit, je ___ au parc tous les jours.",["jouais","ai joué","jouerai","joue"],0],["A2","Tu parles à Marie ? Oui, je ___ parle.",["la","le","lui","leur"],2],
+["B1","Si j'avais le temps, je ___ plus.",["voyagerai","voyagerais","voyageais","voyage"],1],["B1","Il faut que tu ___ tes devoirs.",["fais","feras","fasses","faisais"],2],["B1","C'est le film ___ je t'ai parlé.",["que","qui","où","dont"],3],
+["B2","Bien qu'il ___ fatigué, il continue.",["est","soit","sera","était"],1],["B2","Si tu m'avais prévenu, je ___.",["serais venu","viendrais","suis venu","venais"],0],["B2","C'est la raison pour ___ je suis partie.",["lequel","laquelle","quoi","qui"],1],
+["C1","Je doute qu'il ___ déjà parti.",["est","soit","sera","était"],1],["C1","___ m'inquiète, c'est son silence.",["Ce que","Ce qui","Ce dont","Qui"],1],["C1","___ terminé son rapport, elle est partie.",["Ayant","Étant","En ayant","Avoir"],0],
+["C2","À peine ___ arrivé qu'il repartit.",["il fut","fut-il","était-il","il est"],1],["C2","Je crains qu'il ___ trop tard.",["ne soit","n'est","soit pas","ne sera"],0],["C2","Il s'est ___ compte de son erreur.",["rendue","rendu","rendus","rendre"],1]];
+
+/* ---------- STATE ---------- */
+const KEY='cahier-fr-v1';
+const tk=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addDays=(k,n)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+n);return tk(d)};
+const diffDays=(a,b)=>Math.round((new Date(b+'T12:00')-new Date(a+'T12:00'))/864e5);
+const DEF=()=>({plan:{start:'A1',target:'B2',exam:addDays(tk(),270),min:60,dpw:6,cls:0,type:'canada'},done:{},srs:{},nt:{d:'',n:0},log:{},rate:0.9,drafts:{}});
+let S=DEF();
+try{const raw=JSON.parse(localStorage.getItem(KEY)||'null');if(raw&&typeof raw==='object'){S=Object.assign(DEF(),raw);S.plan=Object.assign(DEF().plan,raw.plan||{})}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2600)};
+const fmtDate=k=>new Date(k+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+/* ---------- SPEECH ---------- */
+const hasTTS='speechSynthesis' in window;let VOICE=null,playId=0;
+const pickVoice=()=>{try{const vs=speechSynthesis.getVoices();VOICE=vs.find(v=>/^fr[-_]FR/i.test(v.lang)&&/google|amélie|amelie|thomas|audrey|marie|denise|premium|enhanced/i.test(v.name))||vs.find(v=>/^fr[-_]FR/i.test(v.lang))||vs.find(v=>/^fr/i.test(v.lang))||null}catch(e){}};
+if(hasTTS){pickVoice();try{speechSynthesis.onvoiceschanged=pickVoice}catch(e){}}
+const say=(t,rate)=>new Promise(res=>{if(!hasTTS){toast('This browser has no speech voice.');return res()}
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';if(VOICE)u.voice=VOICE;u.rate=rate||S.rate;u.onend=res;u.onerror=res;speechSynthesis.speak(u)}catch(e){res()}});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const playSeq=async(arr,rate)=>{const id=++playId;for(const t of arr){if(id!==playId)return;await say(t,rate);await sleep(350)}};
+const SPK='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+const sb=(t,l)=>`<button class="say" data-say="${esc(t)}" aria-label="Listen: ${esc(l||t)}">${SPK}</button>`;
+const voiceNote=()=>hasTTS&&!VOICE?`<p class="note">No French voice was found on this device, so audio may sound English. Add one in your device settings (iPhone: Settings › Accessibility › Spoken Content › Voices › French; Android: Text-to-speech settings).</p>`:'';
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+/* ---------- HELPERS ---------- */
+const norm=s=>String(s).toLowerCase().replace(/[’`]/g,"'").replace(/…/g,' ').replace(/\s+/g,' ').replace(/[.!?;,]+$/,'').trim();
+const strip=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'');
+const checkAns=(inp,ans)=>{const a=norm(inp),o=ans.split('|').map(norm);if(o.includes(a))return 2;if(o.map(strip).includes(strip(a)))return 1;return 0};
+const words=s=>norm(s).replace(/[«»"!?.,;:()]/g,' ').split(/\s+/).filter(Boolean);
+function wdiff(exp,got){const A=words(exp),B=words(got),n=A.length,m=B.length;const L=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=strip(A[i])===strip(B[j])?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  let i=0,j=0;const out=[];let good=0;while(i<n){if(j<m&&strip(A[i])===strip(B[j])){const ok=A[i]===B[j];out.push([A[i],ok?'w-ok':'w-acc']);good+=ok?1:.5;i++;j++}else if(j<m&&L[i][j+1]>=L[i+1][j])j++;else{out.push([A[i],'w-miss']);i++}}
+  return{html:out.map(([w,c])=>`<span class="${c}">${esc(w)}</span>`).join(' '),score:Math.round(100*good/Math.max(n,1))}}
+const sentences=lv=>UNITS.filter(u=>u.lv===lv).flatMap(u=>u.ex.map(e=>({f:e[0],e:e[1],u:u.t})));
+let TIMERS=[];const stopTimers=()=>{TIMERS.forEach(clearInterval);TIMERS=[]};
+const mmss=s=>Math.floor(s/60)+':'+String(Math.max(0,s)%60).padStart(2,'0');
+const seg=(name,items,cur)=>`<div class="seg" role="group">${items.map(([v,l])=>`<button data-${name}="${esc(v)}" aria-pressed="${v===cur}">${esc(l)}</button>`).join('')}</div>`;
+function micCheck(target,out){
+  if(!SR){out.textContent="Speech recognition isn't available in this browser. Record yourself with your phone's voice memo and compare it with the model.";return}
+  try{const r=new SR();r.lang='fr-FR';r.interimResults=false;r.maxAlternatives=1;
+    r.onresult=e=>{const said=e.results[0][0].transcript;const d=wdiff(target,said);out.innerHTML=`Heard: <b>${esc(said)}</b><br>${d.html}<br><b>${d.score}%</b> of the words matched.`};
+    r.onerror=e=>{out.textContent=(e.error==='not-allowed'||e.error==='service-not-allowed')?'The microphone is blocked in this view. Open the app in its own browser tab, or record yourself on your phone.':'Could not hear you ('+e.error+'). Try again.'};
+    r.start();out.textContent='Listening… speak now.'}catch(e){out.textContent='The microphone is not available here.'}}
+
+/* ---------- PLAN MATH ---------- */
+function stats(){
+  const p=S.plan,li=LV.indexOf(p.start),ti=LV.indexOf(p.target),k=tk();
+  let nowH=prevEnd(p.start);UNITS.forEach(u=>{if(LV.indexOf(u.lv)>=li&&S.done[u.id])nowH+=uH(u)});
+  const daysRaw=diffDays(k,p.exam),days=Math.max(1,daysRaw),weeks=days/7,studyDays=Math.max(1,Math.round(days*p.dpw/7));
+  const needH=Math.max(0,END[p.target]-nowH),classH=p.cls*weeks,selfNeed=Math.max(0,needH-classH);
+  const reqMin=Math.ceil(selfNeed*60/studyDays/5)*5;
+  const perDay=p.min/60*p.dpw/7+p.cls/7;const projH=nowH+perDay*days;
+  const pending=UNITS.filter(u=>{const i=LV.indexOf(u.lv);return i>=li&&i<=ti&&!S.done[u.id]});
+  const cur=pending[0]||UNITS.find(u=>LV.indexOf(u.lv)>=li&&!S.done[u.id])||null;
+  return{p,nowH,days,daysRaw,studyDays,needH,reqMin,projH,perDay,pending,cur,dpu:Math.max(1,Math.round(studyDays/Math.max(1,pending.length))),ok:needH===0||p.min>=reqMin,exam:daysRaw>=0&&daysRaw<=42}}
+function levelAt(h){if(h>=END.C2)return'C2 complete';for(const l of LV){if(h<END[l]){const f=(h-prevEnd(l))/(END[l]-prevEnd(l));return(f<.34?'early ':f<.67?'mid ':'late ')+l}}return'C2'}
+function workLevel(){const st=stats();return st.cur?st.cur.lv:S.plan.target}
+
+/* ---------- DAILY SESSION ---------- */
+const dayNum=()=>Math.floor(new Date(tk()+'T12:00')/864e5);
+function taskFor(lv,seed){const i=LV.indexOf(lv);if(i<2)return 1;if(i===2)return 1+seed%2;return 1+seed%3}
+function session(st){
+  const M=S.plan.min,seed=dayNum(),lv=st.cur?st.cur.lv:S.plan.target,dueN=dueCards().length,dow=new Date().getDay();
+  const wt=WT[taskFor(lv,seed)-1],sp=ST[taskFor(lv,seed+1)-1],writeDay=dow%2===1;
+  const b=[
+   {id:'srs',w:.13,t:'Vocabulary review',d:dueN?`${dueN} cards waiting. Say each word aloud before you turn the card.`:'No cards due. Finish today’s lesson to unlock its words.',go:'#words'},
+   {id:'unit',w:st.exam?.15:.25,t:st.cur?`Lesson ${st.cur.lv}.${st.cur.n}: ${st.cur.t}`:'Revise your weakest unit',d:st.cur?`Read the rule, play every example, then do the exercises. Plan about ${st.dpu} study day${st.dpu>1?'s':''} on this unit before marking it done.`:'Pick any unit and redo its exercises without looking at the rule.',go:st.cur?'#u-'+st.cur.id:'#course'},
+   {id:'shadow',w:.15,t:'Sounds and shadowing',d:`Shadow ${lv} sentences at 0.85×: listen once, then speak with the voice, then without the text.`,go:'#shadow'},
+   {id:'listen',w:.14,t:'Listening',d:'Five dictée sentences, then one comprehension question.',go:'#listen'},
+   {id:'read',w:st.exam?.08:.11,t:'Reading',d:`Read one ${lv} text aloud and answer its questions in under three minutes.`,go:'#read'},
+   writeDay?{id:'write',w:.22,t:`Writing: TCF ${wt.t}`,d:`${wt.w[0]}–${wt.w[1]} words. « ${wt.p[seed%wt.p.length]} »`,go:'#write'}
+           :{id:'speak',w:.22,t:`Speaking: TCF ${sp.t}`,d:`« ${sp.p[seed%sp.p.length]} » Talk out loud for the full time.`,go:'#speak'}];
+  if(st.exam)b.push({id:'tcf',w:.12,t:'Exam phase: timed TCF drill',d:'Under 6 weeks to go. Do the 18-question structures test against the clock and review every mistake.',go:'#tcf'});
+  const tw=b.reduce((a,x)=>a+x.w,0);b.forEach(x=>x.m=Math.max(5,Math.round(M*x.w/tw/5)*5));return b}
+
+/* ---------- SRS ---------- */
+const IV=[0,1,3,7,14,30,60];
+function cardPool(){const st=stats();const ids=new Set(UNITS.filter(u=>S.done[u.id]).map(u=>u.id));if(st.cur)ids.add(st.cur.id);
+  const out=[];UNITS.forEach(u=>{if(ids.has(u.id))u.v.forEach(([f,e])=>out.push({f,e,lv:u.lv}))});return out}
+function dueCards(){const k=tk();if(S.nt.d!==k)S.nt={d:k,n:0};const p=cardPool();
+  return p.filter(c=>S.srs[c.f]&&S.srs[c.f].due<=k).concat(p.filter(c=>!S.srs[c.f]).slice(0,Math.max(0,12-S.nt.n)))}
+function grade(c,g){const r=S.srs[c.f];if(!r)S.nt.n++;const b=g===0?0:Math.min(6,(r?r.b:0)+(g===2?2:1));S.srs[c.f]={b,due:addDays(tk(),g===0?0:IV[b])};save()}
+
+/* ---------- VIEWS ---------- */
+let INIT=null;
+function streak(){let n=0,k=tk();if(!(S.log[k]&&Object.values(S.log[k]).some(Boolean)))k=addDays(k,-1);while(S.log[k]&&Object.values(S.log[k]).some(Boolean)){n++;k=addDays(k,-1)}return n}
+function ladder(st){return`<div class="ladder">${LV.map(l=>{const lo=prevEnd(l),f=Math.max(0,Math.min(1,(st.nowH-lo)/(END[l]-lo)));return`<div class="rung ${l===S.plan.target?'tg':''}"><b>${l}</b><div class="bar" role="img" aria-label="${l} ${Math.round(f*100)}% covered"><i style="width:${f*100}%"></i></div><span class="small mute">${l===S.plan.target?'target':Math.round(f*100)+'%'}</span></div>`}).join('')}</div>`}
+
+function rToday(){
+  const st=stats(),ses=session(st),k=tk(),lg=S.log[k]||{},dn=ses.filter(b=>lg[b.id]).length,tot=ses.reduce((a,b)=>a+b.m,0);
+  const status=st.daysRaw<0?`<span class="warn">Your exam date has passed. Set the next one in Plan.</span>`:st.needH===0?`<span class="ok">You've covered the course up to ${S.plan.target}. Keep up the timed TCF practice.</span>`:st.ok?`<span class="ok">On track.</span> ${S.plan.target} needs about ${st.reqMin} min a day; you've planned ${S.plan.min}.`:`<span class="warn">Behind.</span> ${S.plan.target} needs about ${st.reqMin} min a day. At ${S.plan.min} min you would reach roughly ${levelAt(st.projH)} by exam day. <a href="#plan">Adjust the plan</a>.`;
+  INIT=()=>{$$('[data-blk]').forEach(c=>c.addEventListener('change',()=>{S.log[k]=S.log[k]||{};S.log[k][c.dataset.blk]=c.checked;save();route()}))};
+  return`<section class="band"><div class="wrap">
+  <div class="row" style="justify-content:space-between;align-items:end"><div><h1>Aujourd'hui</h1><p class="hand">${esc(new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}</p></div><p class="small" style="max-width:52ch">${status}</p></div>
+  <div class="tgrid" style="margin-top:14px">
+   <div class="paper session"><ol>${ses.map(b=>`<li class="blk ${lg[b.id]?'done':''}"><div class="mins">${b.m}<small> min</small></div><div><h3>${esc(b.t)}</h3><p class="small">${esc(b.d)}</p><a class="btn sm" href="${b.go}">Open</a></div><label class="tick"><input type="checkbox" data-blk="${b.id}" ${lg[b.id]?'checked':''}><span></span><b class="sr">Done: ${esc(b.t)}</b></label></li>`).join('')}</ol>
+   <p class="small mute" style="margin:10px 0 0">${dn} of ${ses.length} done · ${tot} minutes planned${st.exam?' · exam phase':''}</p></div>
+   <aside class="card"><div class="count">J–${st.daysRaw<0?0:st.daysRaw}</div><p>until your ${S.plan.type==='canada'?'TCF Canada':'TCF tout public'} on <b>${fmtDate(S.plan.exam)}</b>. Target <b>${S.plan.target}</b>.</p>
+   ${ladder(st)}<p class="small mute" style="margin-top:12px">About ${Math.round(st.nowH)} of ${END[S.plan.target]} study hours covered. Streak: <b>${streak()}</b> day${streak()===1?'':'s'}.</p></aside>
+  </div>${voiceNote()}</div></section>`}
+
+let CL=null;
+function rCourse(){
+  CL=CL||workLevel();const us=UNITS.filter(u=>u.lv===CL),[nm,band,can]=LVINFO[CL],dn=us.filter(u=>S.done[u.id]).length;
+  INIT=()=>$$('[data-cl]').forEach(b=>b.onclick=()=>{CL=b.dataset.cl;route()});
+  return`<section class="band"><div class="wrap"><h1>Parcours A1 → C2</h1>
+  <p>Every grammar point, the core vocabulary and the TCF skills, in order. Mark a unit done when you can do its exercises without looking. Its words then join your review cards.</p>
+  ${seg('cl',LV.map(l=>[l,l]),CL)}
+  <div class="card" style="margin-bottom:16px"><h2 style="margin-top:0">${CL} · ${nm}</h2><p>${esc(can)}</p><p class="small mute">TCF score band ${band} · about ${END[CL]-prevEnd(CL)} study hours · ${dn} of ${us.length} units done</p></div>
+  <div class="units">${us.map(u=>`<a class="card unit ${S.done[u.id]?'dn':''}" href="#u-${u.id}"><span class="n">${S.done[u.id]?'✓':u.n}</span><span><b>${esc(u.t)}</b><br><span class="small mute">${u.ex.length} examples · ${u.v.length} words · ${u.q.length} exercises</span></span></a>`).join('')}</div>
+  <p class="small mute" style="margin-top:18px">Hours follow the usual guided-learning estimates for each CEFR level; real progress varies with your classes, practice and exposure.</p></div></section>`}
+
+function rLesson(id){
+  const u=UNITS.find(x=>x.id===id);if(!u){location.hash='#course';return''}
+  const i=UNITS.indexOf(u),pv=UNITS[i-1],nx=UNITS[i+1];CL=u.lv;
+  INIT=()=>{$('#playall').onclick=()=>playSeq(u.ex.map(e=>e[0]));
+    $$('.q').forEach((q,qi)=>{const inp=$('input',q),fb=$('.fb',q),go=()=>{const r=checkAns(inp.value,u.q[qi][1]);fb.className='fb '+(r===2?'ok':r===1?'warn':'bad');fb.textContent=r===2?'Correct.':r===1?'Almost: check the accents. Answer: '+u.q[qi][1].split('|')[0]:'Not yet. '+(u.q[qi][2]?'Hint: '+u.q[qi][2]+'. ':'')+'Try again or reveal.'};
+      $('.chk',q).onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};$('.rev',q).onclick=()=>{fb.className='fb mute';fb.textContent='Answer: '+u.q[qi][1].split('|').join(' or ')}});
+    $('#done').onclick=()=>{S.done[u.id]=!S.done[u.id];save();toast(S.done[u.id]?'Unit done. Its words are now in your review cards.':'Marked as not done.');route()}};
+  return`<section class="band"><div class="wrap"><a href="#course" class="small">← Parcours ${u.lv}</a>
+  <div class="two" style="margin-top:10px"><div class="paper"><p class="hand">${u.lv} · unit ${u.n} of ${CNT[u.lv]}</p><h1>${esc(u.t)}</h1><p>${esc(u.g)}</p>
+   <h2>Examples</h2><div>${u.ex.map(e=>`<div class="ex">${sb(e[0])}<div><div class="fr" lang="fr">${esc(e[0])}</div><div class="en">${esc(e[1])}</div></div></div>`).join('')}</div>
+   <div class="row" style="margin-top:10px"><button id="playall">${SPK} Play all</button><span class="small mute">Then say each one out loud, copying the rhythm.</span></div></div>
+   <div><div class="card"><h2 style="margin-top:0">Vocabulary</h2><div class="vocab">${u.v.map(v=>`<div class="vw">${sb(v[0])}<span><b lang="fr">${esc(v[0])}</b><br><span class="small mute">${esc(v[1])}</span></span></div>`).join('')}</div></div>
+   <div class="card" style="margin-top:16px"><h2 style="margin-top:0">Practice</h2>${u.q.map(q=>`<div class="q"><p lang="fr"><b>${esc(q[0])}</b></p><div class="row"><input aria-label="Your answer" autocomplete="off" autocapitalize="off" spellcheck="false" lang="fr"><button class="chk sm">Check</button><button class="rev sm">Reveal</button></div><p class="fb" aria-live="polite"></p></div>`).join('')}</div>
+   <div class="row" style="margin-top:16px"><button id="done" class="${S.done[u.id]?'':'pri'}">${S.done[u.id]?'Mark as not done':'Mark unit as done'}</button>${pv?`<a class="btn" href="#u-${pv.id}">← Previous</a>`:''}${nx?`<a class="btn" href="#u-${nx.id}">Next →</a>`:''}</div></div></div>
+  ${voiceNote()}</div></section>`}
+
+let PQ=null,PS=[0,0];
+function rSounds(){
+  const groups=[...new Set(SND.map(s=>s[0]))];
+  const newPair=()=>{const p=PAIRS[Math.floor(Math.random()*PAIRS.length)];PQ={p,a:Math.round(Math.random()),done:false}};if(!PQ)newPair();
+  INIT=()=>{const draw=()=>{$('#pq').innerHTML=`<p class="small mute">Sounds: ${esc(PQ.p[2])}</p><div class="row"><button class="pri" id="pplay">${SPK} Play the word</button></div><div class="row" style="margin-top:12px">${PQ.p.slice(0,2).map((w,i)=>`<button class="chip" data-pick="${i}" style="font-size:20px;padding:8px 24px" lang="fr">${esc(w)}</button>`).join('')}</div><p class="fb" id="pfb" aria-live="polite"></p><p class="small mute">Score ${PS[0]} / ${PS[1]}</p>`;
+      $('#pplay').onclick=()=>{playId++;say(PQ.p[PQ.a],.85)};
+      $$('[data-pick]').forEach(b=>b.onclick=()=>{if(PQ.done)return;PQ.done=true;PS[1]++;const ok=+b.dataset.pick===PQ.a;if(ok)PS[0]++;const f=$('#pfb');f.className='fb '+(ok?'ok':'bad');f.innerHTML=(ok?'Right: ':'It was: ')+esc(PQ.p[PQ.a])+` <button class="sm" id="pnext">Next pair</button>`;$('#pnext').onclick=()=>{newPair();draw()}})};draw()};
+  return`<section class="band"><div class="wrap"><h1>Les sons du français</h1>
+  <p>French has 16 vowel sounds, including four you won't find in English (u, eu, and the nasals). Tap a word to hear it, copy it three times, then test your ear below.</p>${voiceNote()}
+  <div class="two"><div class="card"><h2 style="margin-top:0">Ear training: minimal pairs</h2><div id="pq"></div></div>
+  <div class="card"><h2 style="margin-top:0">Speed</h2><p class="small">Applies to all audio in the app.</p>${seg('rate',[['0.7','0.7×'],['0.85','0.85×'],['0.9','0.9×'],['1','1×']],String(S.rate))}</div></div>
+  ${groups.map(g=>`<h2>${g}</h2><div class="snd">${SND.filter(s=>s[0]===g).map(s=>`<div class="card"><div class="row" style="justify-content:space-between"><span class="ipa">/${esc(s[1])}/</span><span class="mute small">${esc(s[2])}</span></div><p class="small">${esc(s[3])}</p><div class="chips">${s[4].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div>`).join('')}</div>`).join('')}
+  <h2>Linking, rhythm and melody</h2><div class="snd">${RULES.map(r=>`<div class="card"><h3>${esc(r[0])}</h3><p class="small">${esc(r[1])}</p><div class="chips">${r[2].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div>`).join('')}</div></div></section>`}
+
+let SH=null;
+function rShadow(){
+  SH=SH||{lv:workLevel(),i:0,rate:.85,show:true,reps:3};const list=sentences(SH.lv);SH.i=Math.min(SH.i,list.length-1);const s=list[SH.i];
+  INIT=()=>{$$('[data-shl]').forEach(b=>b.onclick=()=>{SH.lv=b.dataset.shl;SH.i=0;route()});
+    $$('[data-shr]').forEach(b=>b.onclick=()=>{SH.rate=+b.dataset.shr;route()});
+    $('#shprev').onclick=()=>{SH.i=(SH.i-1+list.length)%list.length;route()};$('#shnext').onclick=()=>{SH.i=(SH.i+1)%list.length;route()};
+    $('#shplay').onclick=()=>{playId++;say(s.f,SH.rate)};$('#shtext').onclick=()=>{SH.show=!SH.show;route()};
+    $('#shreps').onchange=e=>{SH.reps=+e.target.value};
+    $('#shloop').onclick=async()=>{const id=++playId,ph=$('#phase'),gap=Math.round(s.f.length*75/SH.rate)+700;
+      for(let r=0;r<SH.reps;r++){if(id!==playId)break;ph.textContent=`Round ${r+1}: speak with the voice`;await say(s.f,SH.rate);if(id!==playId)break;ph.textContent='Your turn: say it alone';await sleep(gap)}if(id===playId)ph.textContent='Done. Try it at 1×, or hide the text.'};
+    $('#shmic').onclick=()=>micCheck(s.f,$('#shout'))};
+  return`<section class="band"><div class="wrap"><h1>Shadowing</h1>
+  <p>Shadowing builds rhythm, linking and speed. Listen once while reading. Then speak <i>at the same time</i> as the voice, a split second behind it. Then hide the text and do it from memory. Exaggerate the melody.</p>${voiceNote()}
+  ${seg('shl',LV.map(l=>[l,l]),SH.lv)}
+  <div class="two"><div class="paper"><p class="hand">${SH.i+1} / ${list.length} · ${esc(s.u)}</p>
+   <p class="big" lang="fr">${SH.show?esc(s.f):'· · · listen · · ·'}</p><p class="mute">${SH.show?esc(s.e):''}</p>
+   <div class="row"><button id="shprev" aria-label="Previous sentence">←</button><button id="shplay">${SPK} Listen</button><button id="shloop" class="pri">Shadow ×${SH.reps}</button><button id="shnext" aria-label="Next sentence">→</button></div>
+   <p class="phase" id="phase" aria-live="polite"></p></div>
+  <div class="card"><h2 style="margin-top:0">Settings</h2><p class="small"><b>Speed</b></p>${seg('shr',[['0.7','0.7×'],['0.85','0.85×'],['1','1×']],String(SH.rate))}
+   <div class="row"><button id="shtext">${SH.show?'Hide text (blind)':'Show text'}</button><label class="row" style="font-weight:400">Rounds <select id="shreps">${[1,2,3,5].map(n=>`<option ${n===SH.reps?'selected':''}>${n}</option>`).join('')}</select></label></div>
+   <h3 style="margin-top:18px">Check your pronunciation</h3><button id="shmic">Say it and check</button><p class="small" id="shout" aria-live="polite"></p>
+   <p class="small mute">If the microphone is blocked here, record yourself on your phone and listen back against the model.</p></div></div></div></section>`}
+
+let DC=null,LQ={};
+function rListen(){
+  DC=DC||{lv:workLevel(),i:Math.floor(Math.random()*99)};const pool=sentences(DC.lv),s=pool[DC.i%pool.length];
+  const items=LIS.filter(x=>x[0]===DC.lv);
+  INIT=()=>{$$('[data-dcl]').forEach(b=>b.onclick=()=>{DC.lv=b.dataset.dcl;route()});
+    $('#dplay').onclick=()=>{playId++;say(s.f)};$('#dslow').onclick=()=>{playId++;say(s.f,.7)};
+    const chk=()=>{const d=wdiff(s.f,$('#dtxt').value);$('#dres').innerHTML=`<p>${d.html}</p><p><b>${d.score}%</b> · <span class="w-ok">correct</span>, <span class="w-acc">accent or spelling</span>, <span class="w-miss">missed</span></p><p class="mute small">${esc(s.f)}</p>`};
+    $('#dchk').onclick=chk;$('#dnext').onclick=()=>{DC.i++;route()};
+    $$('.lis').forEach(el=>{const it=items[+el.dataset.i];$('.lp',el).onclick=()=>{playId++;say(it[1])};
+      $$('[data-o]',el).forEach(b=>b.onclick=()=>{$$('[data-o]',el).forEach(x=>{x.disabled=true;if(+x.dataset.o===it[4])x.classList.add('right')});if(+b.dataset.o!==it[4])b.classList.add('wrong');$('.tr',el).hidden=false})})};
+  return`<section class="band"><div class="wrap"><h1>Écoute</h1>${voiceNote()}${seg('dcl',LV.map(l=>[l,l]),DC.lv)}
+  <div class="two"><div class="paper"><h2 style="margin-top:0">Dictée</h2><p class="small">Play the sentence as often as you need and type exactly what you hear, with accents and punctuation.</p>
+   <div class="row"><button id="dplay" class="pri">${SPK} Play</button><button id="dslow">Play slowly</button></div>
+   <textarea id="dtxt" lang="fr" spellcheck="false" autocapitalize="off" style="min-height:130px;margin-top:12px" aria-label="Type what you hear"></textarea>
+   <div class="row"><button id="dchk">Check</button><button id="dnext">Next sentence</button></div><div id="dres" aria-live="polite"></div></div>
+  <div class="card"><h2 style="margin-top:0">Comprehension</h2><p class="small">Like the TCF: listen first without reading. The transcript appears after you answer.</p>
+   ${items.map((it,i)=>`<div class="lis q" data-i="${i}"><button class="lp sm">${SPK} Play audio ${i+1}</button><p><b lang="fr">${esc(it[2])}</b></p><div class="opts">${it[3].map((o,j)=>`<button data-o="${j}" lang="fr">${esc(o)}</button>`).join('')}</div><p class="tr small mute" lang="fr" hidden>${esc(it[1])}</p></div>`).join('')}</div></div></div></section>`}
+
+let RL=null;
+function rRead(){
+  RL=RL||workLevel();const r=READ.find(x=>x[0]===RL);
+  INIT=()=>{$$('[data-rl]').forEach(b=>b.onclick=()=>{RL=b.dataset.rl;route()});$('#rplay').onclick=()=>{playId++;say(r[2])};
+    $$('.rq').forEach((el,qi)=>$$('[data-o]',el).forEach(b=>b.onclick=()=>{const a=r[3][qi][2];$$('[data-o]',el).forEach(x=>{x.disabled=true;if(+x.dataset.o===a)x.classList.add('right')});if(+b.dataset.o!==a)b.classList.add('wrong')}))};
+  return`<section class="band"><div class="wrap"><h1>Lecture</h1><p>Read once for the gist, once for detail. Then read it aloud and listen to compare. In the TCF you have about a minute and a half per question.</p>
+  ${seg('rl',LV.map(l=>[l,l]),RL)}
+  <div class="two"><div class="paper"><p class="hand">${RL} · ${esc(r[1])}</p><p lang="fr" style="font-size:18px;line-height:32px">${esc(r[2])}</p><button id="rplay">${SPK} Listen to the text</button></div>
+  <div class="card">${r[3].map((q,i)=>`<div class="rq q"><p><b lang="fr">${esc(q[0])}</b></p><div class="opts">${q[1].map((o,j)=>`<button data-o="${j}" lang="fr">${esc(o)}</button>`).join('')}</div></div>`).join('')}
+  <p class="small mute">For more reading at your level, try a French news site written for learners and the official TCF sample tests.</p></div></div></div></section>`}
+
+let W=null;
+function rWrite(){
+  const seed=dayNum();W=W||{t:taskFor(workLevel(),seed),i:seed};const T=WT[W.t-1],pr=T.p[W.i%T.p.length],key='w'+W.t+'-'+(W.i%T.p.length);
+  INIT=()=>{const ta=$('#wtxt'),wc=$('#wc'),upd=()=>{const n=ta.value.trim().split(/\s+/).filter(Boolean).length;wc.textContent=n+' words';wc.className=n<T.w[0]?'warn':n>T.w[1]?'bad':'ok';S.drafts[key]=ta.value;save()};
+    ta.value=S.drafts[key]||'';upd();ta.oninput=upd;
+    $$('[data-wt]').forEach(b=>b.onclick=()=>{W.t=+b.dataset.wt;route()});$('#wnext').onclick=()=>{W.i++;route()};
+    let left=T.min*60,run=false;const tm=$('#wtime');tm.textContent=mmss(left);
+    $('#wstart').onclick=e=>{if(run){stopTimers();run=false;e.target.textContent='Resume timer';return}run=true;e.target.textContent='Pause timer';TIMERS.push(setInterval(()=>{left--;tm.textContent=mmss(left);if(left<=0){stopTimers();tm.textContent='Time!';toast('Time is up. Finish your sentence and check the word count.')}},1000))};
+    $('#wcopy').onclick=async()=>{const n=ta.value.trim().split(/\s+/).filter(Boolean).length;const txt=`Corrige mon texte pour la ${T.t} de l'expression écrite du TCF (niveau visé : ${S.plan.target}).\nConsigne : ${pr}\n\nMon texte (${n} mots) :\n${ta.value}\n\nDonne-moi une note estimée sur 20 avec le niveau CECR, mes erreurs corrigées et expliquées en anglais, puis une version améliorée au niveau visé.`;
+      try{await navigator.clipboard.writeText(txt);toast('Copied. Paste it into Claude for a full correction.')}catch(e){ta.value=txt;ta.select();toast('Copy blocked here: the request is in the box, select and copy it.')}};
+    $('#wclear').onclick=()=>{ta.value='';upd()}};
+  return`<section class="band"><div class="wrap"><h1>Écriture</h1><p>The TCF written test is 60 minutes for three tasks. A task under the word count, off topic or left blank can sink the whole paper, so always write all three.</p>
+  ${seg('wt',WT.map(t=>[String(t.n),t.t]),String(W.t))}
+  <div class="two"><div class="paper"><p class="hand">${T.w[0]}–${T.w[1]} words · about ${T.min} min</p><p lang="fr"><b>${esc(pr)}</b></p>
+   <textarea id="wtxt" lang="fr" aria-label="Your text"></textarea>
+   <div class="row" style="justify-content:space-between"><b id="wc" aria-live="polite"></b><span class="timer" id="wtime"></span></div>
+   <div class="row" style="margin-top:8px"><button id="wstart" class="pri">Start timer</button><button id="wcopy">Copy for correction</button><button id="wnext">Another prompt</button><button id="wclear">Clear</button></div>
+   <p class="small mute">Your draft saves in this browser as you type.</p></div>
+  <div class="card"><h2 style="margin-top:0">${esc(T.t)}</h2><p class="small">${esc(T.d)}</p><h3>Before you hand it in</h3><ul class="small">${T.c.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>
+   <h3>Useful connectors</h3><div class="chips">${['d\'abord','ensuite','enfin','de plus','cependant','en revanche','par conséquent','c\'est pourquoi','pour ma part','en conclusion'].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div></div></div></section>`}
+
+let SPk=null;
+function rSpeak(){
+  const seed=dayNum();SPk=SPk||{t:taskFor(workLevel(),seed+1),i:seed};const T=ST[SPk.t-1],pr=T.p[SPk.i%T.p.length];
+  INIT=()=>{$$('[data-spt]').forEach(b=>b.onclick=()=>{SPk.t=+b.dataset.spt;route()});$('#snext').onclick=()=>{SPk.i++;route()};
+    $('#sprompt').onclick=()=>{playId++;say(pr)};
+    $('#sgo').onclick=()=>{stopTimers();let phase=T.prep?'prep':'talk',left=T.prep||T.talk;const tm=$('#stime'),lb=$('#slab');
+      const tick=()=>{tm.textContent=mmss(left);lb.textContent=phase==='prep'?'Preparation: notes only, no full sentences':'Speak now. Keep going until the time is up.'};tick();
+      TIMERS.push(setInterval(()=>{left--;if(left<0){if(phase==='prep'){phase='talk';left=T.talk;toast('Preparation over. Start speaking.')}else{stopTimers();tm.textContent='0:00';lb.textContent='Finished. How many connectors did you use?';return}}tick()},1000))}};
+  return`<section class="band"><div class="wrap"><h1>Oral</h1><p>The TCF speaking test lasts 12 minutes, face to face with an examiner, in three tasks. Practise out loud every time: thinking the answer isn't speaking it.</p>
+  ${seg('spt',ST.map(t=>[String(t.n),t.t]),String(SPk.t))}
+  <div class="two"><div class="paper"><p class="hand">${T.prep?mmss(T.prep)+' preparation + ':''}${mmss(T.talk)} speaking</p><p class="big" lang="fr">${esc(pr)}</p>
+   <div class="row"><button id="sprompt">${SPK} Hear the question</button><button id="sgo" class="pri">Start</button><button id="snext">Another prompt</button></div>
+   <div class="row" style="margin-top:10px;align-items:baseline"><span class="timer" id="stime">${mmss(T.prep||T.talk)}</span><span id="slab" class="small" aria-live="polite"></span></div>
+   <p class="small mute" id="sout" aria-live="polite"></p></div>
+  <div class="card"><h2 style="margin-top:0">${esc(T.t)}</h2><p class="small">${esc(T.d)}</p><h3>Phrases to have ready</h3><div class="chips">${T.ph.map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div>
+   <h3 style="margin-top:16px">Record and compare</h3><p class="small">Record yourself on your phone, then listen for hesitations, missing liaisons and English vowels. Redo the same prompt the next day.</p></div></div></div></section>`}
+
+let Q=null,QI=0,FLIP=false,DIR='fe';
+function rWords(){
+  if(!Q){Q=dueCards();QI=0;FLIP=false}const c=Q[QI],pool=cardPool();
+  INIT=()=>{const fc=$('#fc');if(fc){fc.onclick=()=>{FLIP=true;route();if(DIR==='ef')say(c.f)};fc.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fc.click()}}}
+    $$('[data-g]').forEach(b=>b.onclick=()=>{const g=+b.dataset.g;grade(c,g);if(g===0)Q.push(c);QI++;FLIP=false;route();const n=Q[QI];if(n&&DIR==='fe')say(n.f)});
+    $$('[data-dir]').forEach(b=>b.onclick=()=>{DIR=b.dataset.dir;FLIP=false;route()});const wr=$('#wreload');if(wr)wr.onclick=()=>{Q=null;route()}};
+  const front=c?(DIR==='fe'?c.f:c.e):'',back=c?(DIR==='fe'?c.e:c.f):'';
+  return`<section class="band"><div class="wrap"><h1>Mots</h1><p>Spaced repetition: words you know come back less and less often; words you miss come back today. Up to 12 new words a day from your current and finished units.</p>
+  ${seg('dir',[['fe','French → English'],['ef','English → French']],DIR)}
+  <div class="two"><div>${c?`<div class="paper flash" id="fc" role="button" tabindex="0" aria-label="Card: tap to turn"><div><p class="hand">${QI+1} / ${Q.length} · ${c.lv}</p><p class="big" ${DIR==='fe'?'lang="fr"':''}>${esc(front)}</p>${FLIP?`<p class="big" style="color:var(--blue)" ${DIR==='ef'?'lang="fr"':''}>${esc(back)}</p>`:'<p class="mute small">Say it aloud, then tap to turn</p>'}</div></div>
+   <div class="row" style="margin-top:12px;justify-content:center">${sb(c.f)}${FLIP?`<button data-g="0">Again</button><button data-g="1" class="pri">Good</button><button data-g="2">Easy</button>`:''}</div>`
+   :`<div class="paper"><p class="big">Nothing due right now.</p><p>${pool.length?'Come back tomorrow, or open your current lesson for new words.':'Open your first lesson in Parcours: its words appear here.'}</p><button id="wreload">Check again</button></div>`}</div>
+  <div class="card"><h2 style="margin-top:0">Your words (${pool.length})</h2><div class="vocab">${pool.slice(-24).reverse().map(v=>`<div class="vw">${sb(v.f)}<span><b lang="fr">${esc(v.f)}</b><br><span class="small mute">${esc(v.e)}</span></span></div>`).join('')}</div>${pool.length>24?'<p class="small mute">Showing the 24 newest.</p>':''}</div></div></div></section>`}
+
+let MK=null;
+function rTcf(){
+  INIT=()=>{$('#mk').onsubmit=e=>{e.preventDefault();const res={};MOCK.forEach((m,i)=>{const v=$(`input[name=m${i}]:checked`);res[m[0]]=(res[m[0]]||0)+(v&&+v.value===m[3]?1:0)});
+      let est=null;for(const l of LV){if(res[l]>=2)est=l;else break}const tot=Object.values(res).reduce((a,b)=>a+b,0);
+      MOCK.forEach((m,i)=>{$$(`input[name=m${i}]`).forEach(x=>{const lab=x.parentElement;lab.style.color=+x.value===m[3]?'var(--ok)':x.checked?'var(--red)':''})});
+      MK=est;$('#mkres').innerHTML=`<p class="big">${tot} / 18</p><p>${est?`Structures estimate: <b>${est}</b>. A rough guide from 18 questions, not a TCF score.`:'Below A1 on this sample: start at unit A1.1.'}</p>${est?`<button id="mkset" class="pri">Start my plan from ${est==='C2'?'C2':LV[LV.indexOf(est)+1]}</button>`:''}`;
+      const b=$('#mkset');if(b)b.onclick=()=>{S.plan.start=est==='C2'?'C2':LV[LV.indexOf(est)+1];if(LV.indexOf(S.plan.target)<LV.indexOf(S.plan.start))S.plan.target=S.plan.start;save();toast('Plan updated.');location.hash='#plan'}};
+    $('#mkt').onclick=e=>{stopTimers();let left=900;const t=$('#mktime');TIMERS.push(setInterval(()=>{left--;t.textContent=mmss(left);if(left<=0){stopTimers();toast('Time! Submit now.')}},1000));t.textContent=mmss(left);e.target.disabled=true}};
+  return`<section class="band"><div class="wrap"><h1>Le TCF</h1><p>The TCF tests general French, not a syllabus, so the course above plus daily timed practice is the preparation. Check the official France Éducation international page for your centre's dates before you book.</p>
+  <div class="two"><div class="card"><h2 style="margin-top:0">Test format</h2>
+  <table class="stack"><thead><tr><th>Section</th><th>TCF Canada</th><th>TCF tout public</th></tr></thead><tbody>
+  <tr><td>Listening (CO)</td><td>39 questions · 35 min</td><td>29 questions · 25 min</td></tr>
+  <tr><td>Language structures</td><td>Not included</td><td>18 questions · 15 min</td></tr>
+  <tr><td>Reading (CE)</td><td>39 questions · 60 min</td><td>29 questions · 45 min</td></tr>
+  <tr><td>Writing (EE)</td><td>3 tasks · 60 min</td><td>3 tasks · 60 min (optional)</td></tr>
+  <tr><td>Speaking (EO)</td><td>3 tasks · 12 min, 2 of them preparation</td><td>3 tasks · 12 min (optional)</td></tr>
+  <tr><td>Total</td><td>2 h 47, all four compulsory</td><td>1 h 25 for the compulsory part</td></tr></tbody></table>
+  <p class="small mute">Tout public figures are for the paper version; on computer the multiple-choice part has 91 items. Since 1 September 2026, re-marking requests for writing and speaking are suspended for about a year.</p></div>
+  <div class="card"><h2 style="margin-top:0">Scores</h2><table><thead><tr><th>Level</th><th class="num">CO, CE, structures</th></tr></thead><tbody>${LV.map(l=>`<tr><td>${l}</td><td class="num">${LVINFO[l][1]}</td></tr>`).join('')}</tbody></table>
+  <p class="small">Writing and speaking are marked out of 20. For Canada's Express Entry French category, NCLC 7 means 458 in listening, 453 in reading and 10/20 in writing and speaking.</p>
+  <h3>Strategy</h3><ul class="small"><li>Listening and reading get harder as you go: bank the early points, don't stall.</li><li>Read the question before the audio plays and listen for its keywords.</li><li>Writing: do all three tasks within the word counts; a missing task can be marked “A1 not reached”.</li><li>Speaking: develop every answer with a reason and an example.</li></ul></div></div>
+  <h2>Mock test: language structures</h2><p>18 questions, three per level, like the tout public structures section. Give yourself 15 minutes.</p>
+  <div class="row"><button id="mkt">Start 15-minute timer</button><span class="timer" id="mktime"></span></div>
+  <form id="mk" class="card" style="margin-top:12px">${MOCK.map((m,i)=>`<fieldset style="border:0;padding:8px 0;margin:0;border-bottom:1px dashed var(--line)"><legend style="padding:0"><span class="small mute">${i+1}.</span> <b lang="fr">${esc(m[1])}</b></legend><div class="row">${m[2].map((o,j)=>`<label style="font-weight:400;min-height:44px;display:inline-flex;align-items:center;gap:6px"><input type="radio" name="m${i}" value="${j}" style="min-height:auto"> <span lang="fr">${esc(o)}</span></label>`).join('')}</div></fieldset>`).join('')}
+  <button class="pri" style="margin-top:14px">See my result</button><div id="mkres" aria-live="polite"></div></form>
+  <p class="small"><a href="https://www.france-education-international.fr/test/tcf-canada">Official TCF Canada page</a> · <a href="https://www.france-education-international.fr/test/tcf-tout-public">Official TCF tout public page</a></p></div></section>`}
+
+function rPlan(){
+  const p=S.plan;
+  const proj=()=>{const st=stats();const rows=LV.filter(l=>END[l]>st.nowH).map(l=>{const d=Math.ceil((END[l]-st.nowH)/st.perDay),k=addDays(tk(),d),before=d<=st.days;return`<tr><td><b>${l}</b>${l===p.target?' (target)':''}</td><td class="num">${fmtDate(k)}</td><td class="${before?'ok':'warn'}">${before?'before exam':'after exam'}</td></tr>`}).join('');
+    $('#proj').innerHTML=`<p class="big">${st.needH===0?'Target covered':st.ok?'On track':'Needs more time'}</p>
+    <p>${st.needH===0?'You have covered every unit up to your target.':`Reaching <b>${p.target}</b> means about <b>${Math.round(st.needH)} more hours</b>. With ${p.dpw} study days a week${p.cls?` and ${p.cls} class hours`:''}, that is <b>${st.reqMin} minutes a day</b>. You've planned ${p.min}.`}</p>
+    ${st.needH&&!st.ok?`<p class="warn">At your current pace you'd reach about ${levelAt(st.projH)} by ${fmtDate(p.exam)}. Raise your daily minutes, add class hours, move the exam date, or aim for a closer target first.</p>`:''}
+    <p class="small">${st.pending.length} units left to ${p.target}: about ${(st.pending.length/Math.max(1,st.days/7)).toFixed(1)} units a week, ${st.dpu} study day${st.dpu>1?'s':''} each.</p>
+    <table><thead><tr><th>Level</th><th class="num">Projected</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`};
+  INIT=()=>{const f=$('#pf'),E=f.elements;f.onsubmit=e=>e.preventDefault();f.oninput=f.onchange=()=>{p.type=E.type.value;p.exam=E.exam.value||p.exam;p.start=E.start.value;p.target=E.target.value;if(LV.indexOf(p.target)<LV.indexOf(p.start)){p.target=p.start;E.target.value=p.start}
+      p.min=+E.min.value;p.dpw=+E.dpw.value;p.cls=Math.max(0,+E.cls.value||0);$('#minv').textContent=p.min+' min';save();proj()};proj();
+    $('#bcopy').onclick=async()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));try{await navigator.clipboard.writeText(code);toast('Progress code copied. Keep it somewhere safe.')}catch(e){$('#bcode').value=code;$('#bcode').select();toast('Copy blocked: the code is in the box below.')}};
+    $('#bload').onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob($('#bcode').value.trim()))));if(!o||!o.plan)throw 0;S=Object.assign(DEF(),o);S.plan=Object.assign(DEF().plan,o.plan);save();toast('Progress restored.');route()}catch(e){toast('That code is not valid.')}};
+    $('#breset').onclick=e=>{if(e.target.dataset.sure){S=DEF();save();toast('Everything reset.');route()}else{e.target.dataset.sure=1;e.target.textContent='Tap again to erase all progress'}}};
+  return`<section class="band"><div class="wrap"><h1>Mon plan</h1><p>Tell the app when you sit the TCF and how much time you have. It works out the daily load, your pace through the units and when you should reach each level.</p>
+  <div class="two"><form id="pf" class="card form">
+   <label>Test<select name="type"><option value="canada" ${p.type==='canada'?'selected':''}>TCF Canada</option><option value="tp" ${p.type==='tp'?'selected':''}>TCF tout public</option></select></label>
+   <label>Exam date<input type="date" name="exam" value="${esc(p.exam)}"></label>
+   <label>I'm starting at<select name="start">${LV.map(l=>`<option ${l===p.start?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>Target level<select name="target">${LV.slice(1).map(l=>`<option ${l===p.target?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>Minutes a day <span id="minv" class="mute">${p.min} min</span><input type="range" name="min" min="15" max="240" step="5" value="${p.min}" style="padding:0"></label>
+   <label>Study days a week<select name="dpw">${[3,4,5,6,7].map(n=>`<option ${n===p.dpw?'selected':''}>${n}</option>`).join('')}</select></label>
+   <label>Class hours a week<input type="number" name="cls" min="0" max="40" step="0.5" value="${p.cls}" inputmode="decimal"></label>
+   <p class="small mute" style="grid-column:1/-1">Not sure of your level? Take the 18-question test in the TCF tab. Units below your starting level count as known.</p></form>
+  <div class="card" id="proj" aria-live="polite"></div></div>
+  <h2>Keep your progress</h2><p class="small">Progress lives in this browser only. Copy your progress code to move it to another device or keep a backup.</p>
+  <div class="row"><button id="bcopy">Copy progress code</button><button id="bload">Restore from code</button><button id="breset">Reset everything</button></div>
+  <textarea id="bcode" style="min-height:90px;margin-top:10px;line-height:1.4;background-image:none" placeholder="Paste a progress code here to restore it" aria-label="Progress code"></textarea></div></section>`}
+
+/* ---------- ROUTER ---------- */
+const VIEWS={today:rToday,course:rCourse,sounds:rSounds,shadow:rShadow,listen:rListen,read:rRead,write:rWrite,speak:rSpeak,words:rWords,tcf:rTcf,plan:rPlan};
+function route(){
+  playId++;if(hasTTS)try{speechSynthesis.cancel()}catch(e){}stopTimers();INIT=null;
+  const h=location.hash.slice(1)||'today',isL=h.startsWith('u-'),v=isL?'course':(VIEWS[h]?h:'today');
+  if(v!=='words')Q=null;
+  $$('.tabs a').forEach(a=>{const on=a.getAttribute('href')==='#'+v;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  const m=$('#main'),scroll=route.last===h?window.scrollY:0;m.innerHTML=isL?rLesson(h.slice(2)):VIEWS[v]();route.last=h;
+  if(INIT){const f=INIT;INIT=null;f()}window.scrollTo(0,scroll)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-say]');if(b){playId++;say(b.dataset.say)}
+  const r=e.target.closest('[data-rate]');if(r){S.rate=+r.dataset.rate;save();route()}});
+window.addEventListener('hashchange',route);
+route();
+}
+</script>
+</body>
+</html>

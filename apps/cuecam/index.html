@@ -613,7 +613,52 @@
     return [(vw - sw) / 2, (vh - sh) / 2, sw, sh];
   }
 
-  function render(img, mask){
+
+  // Smooth blur: halve the picture a few times, then double it back up step by step.
+  // Going up in small steps is what stops the blocky "staircase" look.
+  const pyr = [mk(), mk(), mk(), mk(), mk(), mk()];
+  function blurInto(img, sx, sy, sw, sh, W, H, levels){
+    let w = W, h = H;
+    for (let l = 0; l < levels; l++){
+      w = Math.max(2, Math.round(w / 2)); h = Math.max(2, Math.round(h / 2));
+      const [c, x] = pyr[l];
+      if (c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      if (l === 0) x.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); else x.drawImage(pyr[l - 1][0], 0, 0, w, h);
+    }
+    for (let l = levels - 1; l > 0; l--){ const [c, x] = pyr[l - 1]; x.drawImage(pyr[l][0], 0, 0, c.width, c.height); }
+    wX.imageSmoothingEnabled = true; wX.imageSmoothingQuality = 'high';
+    wX.drawImage(pyr[0][0], 0, 0, W, H);
+  }
+
+  // Clean up the cut-out around you: firm up unsure pixels, steady it over time
+  // so the edge doesn't flicker, then soften the edge as it's scaled up.
+  const mcan = document.createElement('canvas'), mX = mcan.getContext('2d', { willReadFrequently: true });
+  const [mup, mupX] = mk();
+  let prevA = null;
+  function refineMask(mask, sx, sy, sw, sh, vw, vh, W, H){
+    const MW = sw < sh ? 144 : 256, MH = Math.max(2, Math.round(MW * sh / sw));
+    if (mcan.width !== MW || mcan.height !== MH){ mcan.width = MW; mcan.height = MH; prevA = null; }
+    mX.clearRect(0, 0, MW, MH);
+    const kx = mask.width / vw, ky = mask.height / vh;
+    mX.drawImage(mask, sx * kx, sy * ky, sw * kx, sh * ky, 0, 0, MW, MH);
+    const id = mX.getImageData(0, 0, MW, MH), d = id.data, n = MW * MH;
+    if (!prevA || prevA.length !== n) prevA = null;
+    const first = !prevA; if (first) prevA = new Float32Array(n);
+    for (let i = 0, j = 3; i < n; i++, j += 4){
+      let a = (d[j] / 255 - 0.22) / 0.4; a = a < 0 ? 0 : a > 1 ? 1 : a; a = a * a * (3 - 2 * a);
+      const v = first ? a : prevA[i] * 0.4 + a * 0.6; prevA[i] = v;
+      d[j - 3] = d[j - 2] = d[j - 1] = 255; d[j] = (v * 255) | 0;
+    }
+    mX.putImageData(id, 0, 0);
+    const uw = MW * 4, uh = MH * 4;
+    if (mup.width !== uw || mup.height !== uh){ mup.width = uw; mup.height = uh; }
+    mupX.clearRect(0, 0, uw, uh); mupX.imageSmoothingEnabled = true; mupX.imageSmoothingQuality = 'high';
+    mupX.drawImage(mcan, 0, 0, uw, uh);
+    return mup;
+  }
+
+  function renderFx(img, mask){
     const vw = cam.videoWidth, vh = cam.videoHeight; if (!vw || !vh) return;
     const [sx, sy, sw, sh] = crop(vw, vh);
     const k = Math.min(1, 1920 / Math.max(sw, sh));
@@ -622,26 +667,19 @@
     const L = look();
     wX.globalCompositeOperation = 'source-over'; wX.globalAlpha = 1;
     const useMask = mask && needSeg();
-    if (useMask && S.blur !== 'off'){
-      const d = S.blur === 'strong' ? 26 : 13;
-      s1.width = Math.max(2, Math.round(W / 4)); s1.height = Math.max(2, Math.round(H / 4));
-      s1X.drawImage(img, sx, sy, sw, sh, 0, 0, s1.width, s1.height);
-      s2.width = Math.max(2, Math.round(W / d)); s2.height = Math.max(2, Math.round(H / d));
-      s2X.drawImage(s1, 0, 0, s2.width, s2.height);
-      wX.imageSmoothingEnabled = true; wX.imageSmoothingQuality = 'high';
-      wX.drawImage(s2, 0, 0, W, H);
-    } else {
-      wX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
-    }
+    if (useMask && S.blur !== 'off') blurInto(img, sx, sy, sw, sh, W, H, S.blur === 'strong' ? 5 : 4);
+    else wX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
     if (useMask){
-      const mx = mask.width / vw, my = mask.height / vh;
+      const m = refineMask(mask, sx, sy, sw, sh, vw, vh, W, H);
       pX.globalCompositeOperation = 'source-over'; pX.globalAlpha = 1;
       pX.clearRect(0, 0, W, H);
-      pX.drawImage(mask, sx * mx, sy * my, sw * mx, sh * my, 0, 0, W, H);
+      pX.imageSmoothingEnabled = true; pX.imageSmoothingQuality = 'high';
+      pX.drawImage(m, 0, 0, W, H);
       pX.globalCompositeOperation = 'source-in';
       pX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
       if (S.smooth > 0){
         s1.width = Math.max(2, Math.round(W / 3)); s1.height = Math.max(2, Math.round(H / 3));
+        s1X.imageSmoothingQuality = 'high';
         s1X.drawImage(img, sx, sy, sw, sh, 0, 0, s1.width, s1.height);
         pX.globalCompositeOperation = 'source-atop'; pX.globalAlpha = S.smooth / 100;
         pX.drawImage(s1, 0, 0, W, H); pX.globalAlpha = 1;
@@ -683,7 +721,7 @@
     if (cam.readyState >= 2){
       if (needSeg() && segm){
         if (!segBusy){ segBusy = true; segm.send({ image: cam }).then(() => { segBusy = false; }, () => { segBusy = false; }); }
-      } else render(cam, null);
+      } else renderFx(cam, null);
     }
     if (cam.requestVideoFrameCallback) cam.requestVideoFrameCallback(fxTick); else requestAnimationFrame(fxTick);
   }
@@ -696,7 +734,7 @@
         await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'vendor/selfie/selfie_segmentation.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
         const m = new SelfieSegmentation({ locateFile: f => 'vendor/selfie/' + f });
         m.setOptions({ modelSelection: 0, selfieMode: false });
-        m.onResults(r => { try { r.segmentationMask && r.image ? render(r.image, r.segmentationMask) : render(cam, null); } catch { render(cam, null); } });
+        m.onResults(r => { try { r.segmentationMask && r.image ? renderFx(r.image, r.segmentationMask) : renderFx(cam, null); } catch { renderFx(cam, null); } });
         await m.initialize();
         segm = m; $('#toast').classList.add('hidden');
       } catch (e) {

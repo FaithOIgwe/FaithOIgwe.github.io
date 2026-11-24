@@ -18,8 +18,33 @@ const fmtDate=k=>new Date(k+'T12:00').toLocaleDateString('en-GB',{day:'numeric',
 const hasTTS='speechSynthesis' in window;let VOICE=null,playId=0;
 const pickVoice=()=>{try{const vs=speechSynthesis.getVoices();VOICE=vs.find(v=>/^fr[-_]FR/i.test(v.lang)&&/google|amélie|amelie|thomas|audrey|marie|denise|premium|enhanced/i.test(v.name))||vs.find(v=>/^fr[-_]FR/i.test(v.lang))||vs.find(v=>/^fr/i.test(v.lang))||null}catch(e){}};
 if(hasTTS){pickVoice();try{speechSynthesis.onvoiceschanged=pickVoice}catch(e){}}
-const say=(t,rate)=>new Promise(res=>{if(!hasTTS){toast('This browser has no speech voice.');return res()}
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';if(VOICE)u.voice=VOICE;u.rate=rate||S.rate;u.onend=res;u.onerror=res;speechSynthesis.speak(u)}catch(e){res()}});
+/* Audio order: 1) a native speaker's clip recorded in the Voice studio, 2) a real speaker from Lingua Libre (words),
+   3) the device's French voice as a fallback. Human clips are looked up in advance so playback starts inside the tap. */
+const CLIPS={};let CUR=null;
+const LLK='cahier-ll-v1';let LL={};try{LL=JSON.parse(localStorage.getItem(LLK)||'{}')||{}}catch(e){}
+const LLQ=new Set();
+function credit(h){const c=document.getElementById('credit');if(!c)return;clearTimeout(credit.t);if(!h){c.hidden=true;return}
+  c.innerHTML=h.kind==='ll'?`Real voice: ${esc(h.sp)} · <a href="${esc(h.pg)}" target="_blank" rel="noopener">Lingua Libre, CC BY-SA 4.0</a>`:`Real voice: ${esc(h.sp)}`;c.hidden=false;credit.t=setTimeout(()=>{c.hidden=true},6000)}
+function stopAudio(){if(CUR){const c=CUR;CUR=null;try{c.a.pause()}catch(e){}c.res()}}
+function humanFor(t){const k=String(t).trim();if(CLIPS[k])return CLIPS[k];const l=LL[k];return l?Object.assign({kind:'ll'},l):null}
+function tts(t,rate,res){if(!hasTTS){toast('This browser has no speech voice.');return res()}
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';if(VOICE)u.voice=VOICE;u.rate=rate||S.rate;u.onend=res;u.onerror=res;speechSynthesis.speak(u)}catch(e){res()}}
+const say=(t,rate)=>new Promise(res=>{stopAudio();if(hasTTS)try{speechSynthesis.cancel()}catch(e){}
+  const k=String(t).trim(),h=humanFor(k);
+  if(h){const a=new Audio(h.u);let started=false;CUR={a,res};a.playbackRate=rate||Math.max(.75,S.rate);try{a.preservesPitch=true}catch(e){}
+    a.onplaying=()=>{started=true;credit(h)};a.onended=()=>{if(CUR&&CUR.a===a)CUR=null;res()};
+    const fail=()=>{if(started)return;if(CUR&&CUR.a===a)CUR=null;credit(null);tts(k,rate,res)};a.onerror=fail;a.play().catch(fail);return}
+  credit(null);tts(k,rate,res);if(!(k in LL))llLookup(k)});
+const llKeys=t=>{const w=t.split(',')[0].replace(/\(.*?\)/g,'').replace(/["«»?!.]/g,'').trim().toLowerCase();const out=[w];const m=w.match(/^(?:le|la|les|un|une|des|du|de la|se|s')\s*(.+)$/)||w.match(/^l'(.+)$/);if(m)out.push(m[1].trim());return out.filter(x=>x&&x.split(/\s+/).length<=4)};
+async function llLookup(t){if(LLQ.has(t)||t in LL)return;const keys=llKeys(t);if(!keys.length){LL[t]=0;return}LLQ.add(t);
+  try{for(const w of keys){const q=`intitle:"LL-Q150 (fra)" intitle:"${w}"`;
+      const r=await fetch('https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url&gsrsearch='+encodeURIComponent(q));
+      const j=await r.json(),end=('-'+w+'.wav').toLowerCase(),pre='File:LL-Q150 (fra)-';
+      const hit=Object.values((j.query&&j.query.pages)||{}).filter(p=>p.title.startsWith(pre)&&p.title.toLowerCase().endsWith(end)&&p.imageinfo&&p.imageinfo[0]);
+      if(hit.length){hit.sort((a,b)=>a.title.localeCompare(b.title));const p=hit[0];LL[t]={u:p.imageinfo[0].url,pg:p.imageinfo[0].descriptionurl,sp:p.title.slice(pre.length,p.title.length-end.length)};break}}
+    if(!(t in LL))LL[t]=0;try{localStorage.setItem(LLK,JSON.stringify(LL))}catch(e){}}catch(e){}finally{LLQ.delete(t)}}
+async function prefetchVoices(){const want=[...new Set($$('[data-say]').map(b=>b.dataset.say.trim()))].filter(k=>!CLIPS[k]&&!(k in LL)&&llKeys(k).length).slice(0,60);
+  let i=0;const worker=async()=>{while(i<want.length){await llLookup(want[i++])}};await Promise.all([worker(),worker(),worker()])}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const playSeq=async(arr,rate)=>{const id=++playId;for(const t of arr){if(id!==playId)return;await say(t,rate);await sleep(350)}};
 const SPK='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
@@ -150,7 +175,7 @@ function rSounds(){
       $('#pplay').onclick=()=>{playId++;say(PQ.p[PQ.a],.85)};
       $$('[data-pick]').forEach(b=>b.onclick=()=>{if(PQ.done)return;PQ.done=true;PS[1]++;const ok=+b.dataset.pick===PQ.a;if(ok)PS[0]++;const f=$('#pfb');f.className='fb '+(ok?'ok':'bad');f.innerHTML=(ok?'Right: ':'It was: ')+esc(PQ.p[PQ.a])+` <button class="sm" id="pnext">Next pair</button>`;$('#pnext').onclick=()=>{newPair();draw()}})};draw()};
   return`<section class="band"><div class="wrap"><h1>Les sons du français</h1>
-  <p>French has 16 vowel sounds, including four you won't find in English (u, eu, and the nasals). Tap a word to hear it, copy it three times, then test your ear below.</p>${voiceNote()}
+  <p>French has 16 vowel sounds, including four you won't find in English (u, eu, and the nasals). Tap a word to hear it, copy it three times, then test your ear below.</p><p class="small mute">Words play real speakers' recordings from Lingua Libre (CC BY-SA 4.0) where one exists, and sentences play our native speaker's recordings as they are added. The speaker's name appears at the bottom of the screen while it plays. Anything not recorded yet uses your device's French voice.</p>${voiceNote()}
   <div class="two"><div class="card"><h2 style="margin-top:0">Ear training: minimal pairs</h2><div id="pq"></div></div>
   <div class="card"><h2 style="margin-top:0">Speed</h2><p class="small">Applies to all audio in the app.</p>${seg('rate',[['0.7','0.7×'],['0.85','0.85×'],['0.9','0.9×'],['1','1×']],String(S.rate))}</div></div>
   ${groups.map(g=>`<h2>${g}</h2><div class="snd">${SND.filter(s=>s[0]===g).map(s=>`<div class="card"><div class="row" style="justify-content:space-between"><span class="ipa">/${esc(s[1])}/</span><span class="mute small">${esc(s[2])}</span></div><p class="small">${esc(s[3])}</p><div class="chips">${s[4].map(w=>`<button class="chip" data-say="${esc(w)}" lang="fr">${esc(w)}</button>`).join('')}</div></div>`).join('')}</div>`).join('')}
@@ -336,10 +361,10 @@ async function recStart(box){
   }catch(e){out.textContent='The microphone is blocked. Allow microphone access for this site in your browser settings, then try again. (It does not work inside the Claude preview.)'}}
 function recStop(){if(!REC)return;clearInterval(REC.iv);const b=$('[data-rec="stop"]',REC.box);if(b){b.dataset.rec='start';b.textContent='● Record again'}try{REC.mr.stop()}catch(e){}REC=null}
 function recDone(box,blob){if(!document.body.contains(box))return;box._blob=blob;const model=box.dataset.model,out=$('.rout',box);
-  out.innerHTML=`<audio controls style="width:100%;margin-top:8px"></audio><div class="row" style="margin-top:6px">${model?'<button data-rec="compare" class="sm">Model, then me</button>':''}<button data-rec="save" class="sm">Save recording</button></div>`;
+  out.innerHTML=box.dataset.key?`<audio controls style="width:100%;margin-top:8px"></audio><div class="row" style="margin-top:6px"><button data-rec="upload" class="sm pri">Use this take</button></div>`:`<audio controls style="width:100%;margin-top:8px"></audio><div class="row" style="margin-top:6px">${model?'<button data-rec="compare" class="sm">Model, then me</button>':''}<button data-rec="save" class="sm">Save recording</button></div>`;
   $('audio',out).src=URL.createObjectURL(blob)}
 async function recAction(btn){const box=btn.closest('.rec'),a=btn.dataset.rec;if(!box)return;
-  if(a==='start')return recStart(box);if(a==='stop')return recStop();
+  if(a==='start')return recStart(box);if(a==='stop')return recStop();if(a==='upload'&&box._blob)return studioUpload(box,btn);
   if(a==='compare'){const au=$('audio',box);const id=++playId;await say(box.dataset.model);if(id===playId&&au){au.currentTime=0;au.play().catch(()=>{})}return}
   if(a==='save'&&box._blob){const r={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),label:box.dataset.label,model:box.dataset.model,created:new Date().toISOString(),blob:box._blob,mime:box._blob.type};
     try{await IDB.put(r);btn.disabled=true;btn.textContent='Saved';toast(USER?'Saved and backing up to your account.':'Saved on this device.');if(USER)cloudSaveRec(r)}catch(e){toast('Could not save on this device.')}}}
@@ -370,16 +395,16 @@ function rDrill(){
 
 /* ---------- CLOUD: accounts, sync, community (Supabase = hosted PostgreSQL) ---------- */
 const CFG=window.CAHIER_CONFIG||{},CLOUD_ON=!!(CFG.supabaseUrl&&CFG.supabaseAnonKey);
-let db=null,USER=null,PROFILE=null,syncT=null,LASTSYNC=null,PWRESET=false;
+let db=null,USER=null,PROFILE=null,RECORDER=null,syncT=null,LASTSYNC=null,PWRESET=false;
 const loadScript=src=>new Promise((res,rej)=>{const t=document.createElement('script');t.src=src;t.onload=res;t.onerror=rej;document.head.appendChild(t)});
 function acctChip(){const a=$('#acct');if(!a)return;a.textContent=!CLOUD_ON?'':USER?(PROFILE?PROFILE.display_name:'My account'):'Sign in';a.hidden=!CLOUD_ON}
 async function cloudInit(){acctChip();if(!CLOUD_ON)return;
   try{await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
-    db=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+    db=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);loadClips();
     db.auth.onAuthStateChange((ev,session)=>{if(ev==='PASSWORD_RECOVERY'){PWRESET=true;location.hash='#account'}setTimeout(()=>onAuth(session),0)});
     const {data}=await db.auth.getSession();await onAuth(data.session)}catch(e){console.warn('cloud',e)}}
 async function onAuth(session){const u=session?session.user:null;if((u&&u.id)===(USER&&USER.id))return;USER=u;PROFILE=null;
-  if(USER){await pullMerge();await loadProfile()}acctChip();route()}
+  RECORDER=null;if(USER){await pullMerge();await loadProfile();try{const r=await db.from('voice_recorders').select('speaker_name').eq('user_id',USER.id).maybeSingle();RECORDER=r.data||null}catch(e){}}acctChip();route()}
 async function loadProfile(){try{const {data}=await db.from('profiles').select('*').eq('id',USER.id).maybeSingle();PROFILE=data||null}catch(e){}}
 function mergeState(a,b){const n=(b.t||0)>(a.t||0)?b:a,o=n===a?b:a,m=Object.assign(DEF(),o,n);
   m.plan=Object.assign(DEF().plan,n.plan||{});m.done=Object.assign({},o.done,n.done);
@@ -475,17 +500,46 @@ function rAccount(){
   return`<section class="band"><div class="wrap"><h1>Mon compte</h1><div class="two"><div>${profileForm()}</div>
    <div class="card"><h2 style="margin-top:0">${esc(USER.email||'Signed in')}</h2><p class="small">Progress syncs automatically a couple of seconds after each change.${LASTSYNC?' Last synced '+esc(LASTSYNC.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}))+'.':''}</p>
     <div class="row"><button id="async">Sync now</button><button id="aout">Sign out</button></div>
+    ${RECORDER?`<h3 style="margin-top:20px">Voice studio</h3><p class="small">You record the native audio that every learner hears.</p><a class="btn pri" href="#studio">Open the voice studio</a>`:''}
     <h3 style="margin-top:20px">Delete account</h3><p class="small mute">Removes your account, progress, profile, posts, replies and recordings for good.</p><button id="adel">Delete my account</button></div></div></div></section>`}
 
+
+/* ---------- VOICE STUDIO: a native speaker records every sentence once; everyone hears it ---------- */
+const hash=s=>{let h=2166136261;for(const c of s){h^=c.codePointAt(0);h=Math.imul(h,16777619)}return(h>>>0).toString(36)};
+const pubUrl=path=>`${CFG.supabaseUrl}/storage/v1/object/public/voices/${path}`;
+async function loadClips(){try{const {data}=await db.from('voice_clips').select('text_key,path,speaker_name').limit(5000);(data||[]).forEach(r=>{CLIPS[r.text_key]={kind:'clip',u:pubUrl(r.path),sp:r.speaker_name,path:r.path}})}catch(e){}}
+function studioGroups(){const uniq=a=>[...new Set(a.map(x=>String(x).trim()).filter(Boolean))];return[
+  ['Lesson examples',uniq(UNITS.flatMap(u=>u.ex.map(e=>e[0])))],['Listening',uniq(LIS.map(x=>x[1]))],['Reading',uniq(READ.map(x=>x[2]))],
+  ['Speaking',uniq(ST.flatMap(t=>t.p.concat(t.ph)))],['Pronunciation',uniq(RULES.flatMap(r=>r[2]).concat(SND.flatMap(s=>s[4]),PAIRS.flatMap(p=>[p[0],p[1]])))],
+  ['Vocabulary',uniq(UNITS.flatMap(u=>u.v.map(v=>v[0])))]]}
+let SG=0,SMISS=true;
+function rStudio(){
+  if(!CLOUD_ON||!USER||!RECORDER){INIT=null;return`<section class="band"><div class="wrap"><h1>Voice studio</h1><div class="paper"><p>This page is for the native speakers who record the course audio. If that's you, ask the app owner to add your account as a recorder, then sign in.</p></div></div></section>`}
+  const G=studioGroups(),all=G.flatMap(g=>g[1]),done=all.filter(k=>CLIPS[k]).length,[gn,items]=G[SG],list=items.filter(k=>!SMISS||!CLIPS[k]);
+  INIT=()=>{$$('[data-sg]').forEach(b=>b.onclick=()=>{SG=+b.dataset.sg;route()});$$('[data-sm]').forEach(b=>b.onclick=()=>{SMISS=b.dataset.sm==='1';route()})};
+  return`<section class="band"><div class="wrap"><h1>Voice studio</h1>
+  <p>Recording as <b>${esc(RECORDER.speaker_name)}</b>. Read each line naturally, at normal speed, in a quiet room with the phone about 20 cm from your mouth. Leave half a second of silence before and after. You can re-record any line; the newest take replaces the old one for every learner.</p>
+  <div class="card" style="margin-bottom:14px"><b>${done} of ${all.length}</b> lines recorded<div class="bar" style="margin-top:8px"><i style="width:${all.length?done/all.length*100:0}%"></i></div></div>
+  ${seg('sg',G.map((g,i)=>[String(i),`${g[0]} (${g[1].filter(k=>CLIPS[k]).length}/${g[1].length})`]),String(SG))}
+  ${seg('sm',[['1','Not recorded yet'],['0','All lines']],SMISS?'1':'0')}
+  <div class="units">${list.length?list.slice(0,80).map(k=>`<div class="card"><p lang="fr" style="font-size:18px;margin-top:0"><b>${esc(k)}</b></p>${CLIPS[k]?`<p class="small ok">Recorded by ${esc(CLIPS[k].sp)} ${sb(k)}</p>`:''}<div class="rec" data-key="${esc(k)}" data-label="" data-model=""><div class="row"><button data-rec="start" class="pri">● Record</button><span class="rtime timer" style="font-size:30px"></span></div><div class="rout small" aria-live="polite"></div></div></div>`).join(''):'<p class="ok">Every line in this section is recorded. Merci !</p>'}</div>
+  ${list.length>80?'<p class="small mute">Showing 80 lines; record these and the next ones appear.</p>':''}</div></section>`}
+async function studioUpload(box,btn){const key=box.dataset.key,blob=box._blob;btn.disabled=true;btn.textContent='Uploading…';
+  try{const ext=/mp4/.test(blob.type)?'m4a':/ogg/.test(blob.type)?'ogg':'webm',path=`${hash(key)}-${Date.now().toString(36)}.${ext}`;
+    const up=await db.storage.from('voices').upload(path,blob,{contentType:blob.type.split(';')[0]||'audio/webm'});if(up.error)throw up.error;
+    const old=CLIPS[key];const {error}=await db.from('voice_clips').upsert({text_key:key,path,speaker_name:RECORDER.speaker_name,user_id:USER.id});if(error)throw error;
+    if(old&&old.path)db.storage.from('voices').remove([old.path]).catch(()=>{});
+    CLIPS[key]={kind:'clip',u:pubUrl(path),sp:RECORDER.speaker_name,path};btn.textContent='Saved for everyone';toast('Saved. Learners now hear this recording.')}
+  catch(e){btn.disabled=false;btn.textContent='Use this take';toast('Upload failed: '+(e.message||e))}}
 /* ---------- ROUTER ---------- */
-const VIEWS={today:rToday,course:rCourse,drill:rDrill,sounds:rSounds,shadow:rShadow,listen:rListen,read:rRead,write:rWrite,speak:rSpeak,words:rWords,tcf:rTcf,plan:rPlan,community:rCommunity,account:rAccount};
+const VIEWS={today:rToday,course:rCourse,drill:rDrill,sounds:rSounds,shadow:rShadow,listen:rListen,read:rRead,write:rWrite,speak:rSpeak,words:rWords,tcf:rTcf,plan:rPlan,community:rCommunity,account:rAccount,studio:rStudio};
 function route(){
-  playId++;if(hasTTS)try{speechSynthesis.cancel()}catch(e){}stopTimers();recStop();INIT=null;
-  const h=location.hash.slice(1)||'today',isL=h.startsWith('u-'),v=isL?'course':(VIEWS[h]?h:'today'),tab=v==='drill'?'course':v;
+  playId++;stopAudio();if(hasTTS)try{speechSynthesis.cancel()}catch(e){}stopTimers();recStop();INIT=null;
+  const h=location.hash.slice(1)||'today',isL=h.startsWith('u-'),v=isL?'course':(VIEWS[h]?h:'today'),tab=v==='drill'?'course':v==='studio'?'account':v;
   if(v!=='words')Q=null;
   $$('.tabs a').forEach(a=>{const on=a.getAttribute('href')==='#'+tab;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   const m=$('#main'),scroll=route.last===h?window.scrollY:0;m.innerHTML=isL?rLesson(h.slice(2)):VIEWS[v]();route.last=h;
-  if(INIT){const f=INIT;INIT=null;f()}window.scrollTo(0,scroll)}
+  if(INIT){const f=INIT;INIT=null;f()}window.scrollTo(0,scroll);setTimeout(prefetchVoices,300)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-say]');if(b){playId++;say(b.dataset.say)}
   const rb=e.target.closest('[data-rec]');if(rb)recAction(rb);
   const r=e.target.closest('[data-rate]');if(r){S.rate=+r.dataset.rate;save();route()}});

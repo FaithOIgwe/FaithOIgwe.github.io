@@ -94,6 +94,7 @@ th{font-family:Fraunces,serif}td.num,th.num{text-align:right;white-space:nowrap}
 .note{background:var(--soft);border-radius:12px;padding:12px 16px;font-size:15px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:92vw;z-index:9}
 .toast.on{opacity:1}
+.credit{position:fixed;right:12px;bottom:12px;margin:0;background:var(--paper);color:var(--mute);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px;z-index:8;max-width:calc(100vw - 24px)}.credit a{color:var(--blue)}
 .phase{min-height:1.6em;font:600 24px Caveat,cursive;color:var(--red)}
 .form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .form label{display:grid;gap:6px}
@@ -115,6 +116,7 @@ table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-bl
 </header>
 <main id="main"></main>
 <div class="toast" id="toast" role="status"></div>
+<p class="credit" id="credit" hidden></p>
 <script src="config.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>

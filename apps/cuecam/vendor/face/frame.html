@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- CueCam face tracker, kept in its own frame so it can't clash with the background-blur model -->
+<script src="face_mesh.js"></script>
+<script>
+let fm = null, pending = null;
+window.ready = (async () => {
+  fm = new FaceMesh({ locateFile: f => f });
+  fm.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5, selfieMode: false });
+  fm.onResults(r => {
+    const lm = r.multiFaceLandmarks && r.multiFaceLandmarks[0];
+    const out = lm ? lm.map(p => [p.x, p.y]) : null;
+    if (pending){ const f = pending; pending = null; f(out); }
+  });
+  await fm.initialize();
+  return true;
+})();
+window.track = async (image) => {
+  const p = new Promise(r => { pending = r; });
+  await fm.send({ image });
+  return p;
+};
+</script>

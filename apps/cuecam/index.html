@@ -422,7 +422,8 @@
     cam.classList.toggle('mirror', (set.facingMode || S.facing) === 'user');
     try { await cam.play(); } catch {}
     const short = Math.min(set.width || 0, set.height || 0);
-    $('#info').textContent = short ? `${short >= 2160 ? '4K' : short >= 1080 ? '1080p' : short + 'p'} · ${Math.round(set.frameRate || S.fps)}fps` : '';
+    infoBase = short ? `${short >= 2160 ? '4K' : short >= 1080 ? '1080p' : short + 'p'}` : '';
+    $('#info').textContent = infoBase ? `${infoBase} · ${Math.round(set.frameRate || S.fps)}fps` : '';
     setupExtras(track);
     buildLenses(set.deviceId);
     maskReady = null;
@@ -431,7 +432,7 @@
   }
 
   // Lenses: iPhone lists each lens as its own camera (Ultra Wide, Telephoto…)
-  let currentDeviceId = null, torchOn = false;
+  let currentDeviceId = null, torchOn = false, infoBase = '', infoAt = 0;
   const lensName = l => /ultra ?wide/i.test(l) ? '0.5×' : /telephoto/i.test(l) ? 'Tele'
     : /dual wide/i.test(l) ? 'Auto·W' : /triple|dual/i.test(l) ? 'Auto' : /front/i.test(l) ? 'Front' : '1×';
   const lensOrder = ['0.5×', '1×', 'Tele', 'Auto', 'Auto·W', 'Front'];
@@ -607,10 +608,10 @@
     moody:    { name: 'Moody',          blur: 'soft',   bright: -6, warm: -8, smooth: 15, contrast: 1.2,  sat: .85,  vig: .45 },
     mono:     { name: 'Black & white',  blur: 'soft',   bright: 2,  warm: 0,  smooth: 15, contrast: 1.15, sat: 0,    vig: .3, mono: true },
   };
-  const fxC = $('#fx'), fxX = fxC.getContext('2d');
+  const fxC = $('#fx');
   const mk = () => { const c = document.createElement('canvas'); return [c, c.getContext('2d')]; };
-  const [segIn, segInX] = mk(), [work, wX] = mk(), [per, pX] = mk(), [s1, s1X] = mk(), [s2, s2X] = mk();
-  let segDur = 40, nextSegAt = 0, maskReady = null, segm = null, segLoading = null, segBusy = false, fxRunning = false, vigCache = null;
+  const [segIn, segInX] = mk();
+  let segDur = 40, nextSegAt = 0, maskReady = null, segm = null, segLoading = null, segBusy = false, fxRunning = false;
   const filterOK = (() => { try {
     const [c, x] = mk(); c.width = c.height = 2; if (!('filter' in x)) return false;
     x.filter = 'invert(1)'; x.fillStyle = '#000'; x.fillRect(0, 0, 2, 2);
@@ -630,27 +631,9 @@
   }
 
 
-  // Smooth blur: halve the picture a few times, then double it back up step by step.
-  // Going up in small steps is what stops the blocky "staircase" look.
-  const pyr = [mk(), mk(), mk(), mk(), mk(), mk()];
-  function blurInto(img, sx, sy, sw, sh, W, H, levels){
-    let w = W, h = H;
-    for (let l = 0; l < levels; l++){
-      w = Math.max(2, Math.round(w / 2)); h = Math.max(2, Math.round(h / 2));
-      const [c, x] = pyr[l];
-      if (c.width !== w || c.height !== h){ c.width = w; c.height = h; }
-      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
-      if (l === 0) x.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); else x.drawImage(pyr[l - 1][0], 0, 0, w, h);
-    }
-    for (let l = levels - 1; l > 0; l--){ const [c, x] = pyr[l - 1]; x.drawImage(pyr[l][0], 0, 0, c.width, c.height); }
-    wX.imageSmoothingEnabled = true; wX.imageSmoothingQuality = 'high';
-    wX.drawImage(pyr[0][0], 0, 0, W, H);
-  }
-
   // Clean up the cut-out around you: firm up unsure pixels, steady it over time
   // so the edge doesn't flicker, then soften the edge as it's scaled up.
   const mcan = document.createElement('canvas'), mX = mcan.getContext('2d', { willReadFrequently: true });
-  const [mup, mupX] = mk();
   let prevA = null;
   function refineMask(mask, sx, sy, sw, sh, vw, vh, W, H){
     const MW = sw < sh ? 144 : 256, MH = Math.max(2, Math.round(MW * sh / sw));
@@ -667,88 +650,187 @@
       d[j - 3] = d[j - 2] = d[j - 1] = 255; d[j] = (v * 255) | 0;
     }
     mX.putImageData(id, 0, 0);
-    const uw = MW * 4, uh = MH * 4;
-    if (mup.width !== uw || mup.height !== uh){ mup.width = uw; mup.height = uh; }
-    mupX.clearRect(0, 0, uw, uh); mupX.imageSmoothingEnabled = true; mupX.imageSmoothingQuality = 'high';
-    mupX.drawImage(mcan, 0, 0, uw, uh);
-    return mup;
+    segDirty = true;
+    return mcan;
   }
 
-  function renderFx(img, mask){
-    const vw = cam.videoWidth, vh = cam.videoHeight; if (!vw || !vh) return;
+  // ---------- GPU renderer: the whole look is drawn in ONE pass on the graphics chip ----------
+  const GVS_FLIP = 'attribute vec2 a;varying vec2 v;void main(){v=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}';
+  const GVS = 'attribute vec2 a;varying vec2 v;void main(){v=a*.5+.5;gl_Position=vec4(a,0.,1.);}';
+  const GDOWN = 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform vec2 px;void main(){gl_FragColor=.25*(texture2D(t,v+px*vec2(-1.,-1.))+texture2D(t,v+px*vec2(1.,-1.))+texture2D(t,v+px*vec2(-1.,1.))+texture2D(t,v+px*vec2(1.,1.)));}';
+  const GMAIN = `precision highp float;varying vec2 v;
+uniform sampler2D uVid,uB,uC,uD,uSeg,uMask,uMask2;
+uniform vec2 uRes,uCT,uDT;uniform vec4 uCrop;uniform float uBlur,uHasSeg;
+uniform float uSmooth,uTone,uLips,uDefine,uHasFace,uMidX;uniform vec4 uEyeL,uEyeR,uMouth,uNose;uniform vec4 uJ[8];
+uniform float uBright,uContrast,uSat,uWarm,uVig;
+uniform float uBloom,uLift,uFade,uGrain,uSparkle,uTime;uniform vec4 uTint;
+vec2 mag(vec2 p,vec4 E){vec2 d=p-E.xy;float t=length(d)/E.z;if(t<1.){p=E.xy+d*(1.-E.w*(1.-t*t)*(1.-t*t));}return p;}
+vec2 pull(vec2 p,vec4 J){float t=length(p-J.xy)/J.z;if(t<1.){float w=1.-t*t;w*=w;p.x+=sign(J.x-uMidX)*J.w*J.z*w;}return p;}
+vec2 pinch(vec2 p,vec4 N){float t=length(p-N.xy)/N.z;if(t<1.){p.x=N.x+(p.x-N.x)*(1.+N.w*(1.-t*t));}return p;}
+vec3 softl(vec3 b,vec3 s){return mix(2.*b*s+b*b*(1.-2.*s),sqrt(b)*(2.*s-1.)+2.*b*(1.-s),step(.5,s));}
+float L(vec3 c){return dot(c,vec3(.299,.587,.114));}
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+vec3 tent(sampler2D t,vec2 uv,vec2 tx){vec3 s=texture2D(t,uv).rgb*4.;
+ s+=2.*(texture2D(t,uv+vec2(tx.x,0.)).rgb+texture2D(t,uv-vec2(tx.x,0.)).rgb+texture2D(t,uv+vec2(0.,tx.y)).rgb+texture2D(t,uv-vec2(0.,tx.y)).rgb);
+ s+=texture2D(t,uv+tx).rgb+texture2D(t,uv-tx).rgb+texture2D(t,uv+vec2(tx.x,-tx.y)).rgb+texture2D(t,uv+vec2(-tx.x,tx.y)).rgb;return s/16.;}
+void main(){
+ vec2 p=v*uRes;
+ if(uHasFace>.5){p=mag(p,uEyeL);p=mag(p,uEyeR);p=mag(p,uMouth);p=pinch(p,uNose);for(int i=0;i<8;i++){p=pull(p,uJ[i]);}}
+ vec2 q=p/uRes, vu=uCrop.xy+q*uCrop.zw;
+ vec3 c=texture2D(uVid,vu).rgb;
+ float person=uHasSeg>.5?texture2D(uSeg,q).a:1.;
+ if(uBlur>.5&&uHasSeg>.5){vec3 bg=uBlur>1.5?tent(uD,vu,uDT):tent(uC,vu,uCT);c=mix(bg,c,person);}
+ if(uHasFace>.5){
+  vec3 mid=texture2D(uB,vu).rgb,low=texture2D(uC,vu).rgb;
+  vec4 m=texture2D(uMask,v),m2=texture2D(uMask2,v);
+  float keep=clamp(m.b,0.,1.),lip=m.g*(1.-keep);
+  float skin=m.r*(1.-keep)*(1.-lip);
+  vec3 det=c-mid;float edge=smoothstep(.07,.16,length(det));
+  vec3 ev=mid+det*mix(1.-uSmooth*.92,1.,edge);
+  ev+=(low-mid)*uTone*.6;ev*=1.+uTone*.07;
+  float lo=L(ev),lm=L(low);ev=mix(ev,mix(ev,low*1.06,.7),smoothstep(lm+.06,lm+.25,lo)*uTone*.85);
+  float le=L(ev);ev=mix(vec3(le),ev,1.-uTone*.1);
+  ev*=1.+m2.r*uTone*.28;
+  c=mix(c,ev,clamp(skin,0.,1.));
+  c*=1.-uDefine*(m2.g*.22+m2.b*.3)*(1.-skin*.5);
+  if(uLips>0.){vec3 sl=softl(clamp(c,0.,1.),vec3(.9,.5,.55));sl+=smoothstep(.35,.6,L(c))*.06;c=mix(c,sl,clamp(uLips*lip,0.,1.));}
+ }
+ c*=uBright;c=(c-.5)*uContrast+.5;float l=L(c);c=mix(vec3(l),c,uSat);
+ if(uWarm!=0.){vec3 wc=uWarm>0.?vec3(1.,.59,.24):vec3(.24,.55,1.);c=mix(c,softl(clamp(c,0.,1.),wc),abs(uWarm));}
+ if(uVig>0.){c*=1.-uVig*smoothstep(min(uRes.x,uRes.y)*.32,length(uRes)*.5,length(p-uRes*.5));}
+ if(uBloom>0.){vec3 b=tent(uC,vu,uCT);c=1.-(1.-clamp(c,0.,1.))*(1.-b*uBloom);}
+ if(uLift>0.)c=1.-(1.-clamp(c,0.,1.))*(1.-uLift);
+ if(uTint.a>0.)c=mix(c,softl(clamp(c,0.,1.),uTint.rgb),uTint.a);
+ if(uFade>0.)c=max(c,vec3(uFade,uFade*.97,uFade*.94));
+ if(uGrain>0.)c+=(hash(floor(p)+fract(uTime*7.)*97.)-.5)*uGrain;
+ if(uSparkle>0.){
+  float cs=uRes.y/9.;vec2 sp=p+vec2(0.,uTime*cs*.25);vec2 cell=floor(sp/cs);float s=0.;vec3 sc=vec3(1.);
+  if(hash(cell)>.35){vec2 ct=(cell+.2+.6*vec2(hash(cell+3.1),hash(cell+7.7)))*cs;vec2 d=sp-ct;float r=cs*(.05+.07*hash(cell+1.3));
+   float tw=max(0.,sin(uTime*(.6+1.6*hash(cell+5.))+6.28*hash(cell+9.)));
+   s=(smoothstep(r*.5,0.,length(d))+.8*(exp(-abs(d.x)/(r*.08))*smoothstep(r*1.6,0.,abs(d.y))+exp(-abs(d.y)/(r*.08))*smoothstep(r*1.6,0.,abs(d.x))))*tw;
+   if(hash(cell+2.2)<.4)sc=vec3(1.,.85,.62);}
+  s*=uSparkle*(1.-person*uHasSeg);c=1.-(1.-clamp(c,0.,1.))*(1.-clamp(sc*s,0.,1.));
+ }
+ gl_FragColor=vec4(clamp(c,0.,1.),1.);
+}`;
+  let G = null, Gfail = false, Gmain = null, Gdown = null, GU = {}, GD = {}, Gt = {}, T = [], segDirty = false, outScale = 1, fpsAvg = 30, lastTick = 0, slowSince = 0;
+  function initG(){
+    if (G || Gfail) return !!G;
+    try {
+      G = fxC.getContext('webgl', { alpha: false, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false, depth: false });
+      if (!G) throw new Error('no webgl');
+      const sh = (t, src) => { const o = G.createShader(t); G.shaderSource(o, src); G.compileShader(o); if (!G.getShaderParameter(o, G.COMPILE_STATUS)) throw new Error(G.getShaderInfoLog(o)); return o; };
+      const prog = (vs, fs) => { const p = G.createProgram(); G.attachShader(p, sh(G.VERTEX_SHADER, vs)); G.attachShader(p, sh(G.FRAGMENT_SHADER, fs)); G.bindAttribLocation(p, 0, 'a'); G.linkProgram(p); if (!G.getProgramParameter(p, G.LINK_STATUS)) throw new Error('link'); return p; };
+      Gmain = prog(GVS_FLIP, GMAIN); Gdown = prog(GVS, GDOWN);
+      const buf = G.createBuffer(); G.bindBuffer(G.ARRAY_BUFFER, buf); G.bufferData(G.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), G.STATIC_DRAW);
+      G.enableVertexAttribArray(0); G.vertexAttribPointer(0, 2, G.FLOAT, false, 0, 0);
+      ['uVid','uB','uC','uD','uSeg','uMask','uMask2','uRes','uCT','uDT','uCrop','uBlur','uHasSeg','uSmooth','uTone','uLips','uDefine','uHasFace','uMidX','uEyeL','uEyeR','uMouth','uNose','uJ',
+       'uBright','uContrast','uSat','uWarm','uVig','uBloom','uLift','uFade','uGrain','uSparkle','uTime','uTint'].forEach(n => GU[n] = G.getUniformLocation(Gmain, n));
+      GD.t = G.getUniformLocation(Gdown, 't'); GD.px = G.getUniformLocation(Gdown, 'px');
+      ['vid', 'seg', 'mask', 'mask2'].forEach(k => { Gt[k] = newTex(); G.texImage2D(G.TEXTURE_2D, 0, G.RGBA, 1, 1, 0, G.RGBA, G.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0])); });
+      return true;
+    } catch (e) { Gfail = true; G = null; console.warn('effects off', e); return false; }
+  }
+  function newTex(){ const t = G.createTexture(); G.bindTexture(G.TEXTURE_2D, t);
+    G.texParameteri(G.TEXTURE_2D, G.TEXTURE_WRAP_S, G.CLAMP_TO_EDGE); G.texParameteri(G.TEXTURE_2D, G.TEXTURE_WRAP_T, G.CLAMP_TO_EDGE);
+    G.texParameteri(G.TEXTURE_2D, G.TEXTURE_MIN_FILTER, G.LINEAR); G.texParameteri(G.TEXTURE_2D, G.TEXTURE_MAG_FILTER, G.LINEAR); return t; }
+  function targets(vw, vh){
+    const sizes = [4, 8, 16, 32].map(d => [Math.max(2, Math.round(vw / d)), Math.max(2, Math.round(vh / d))]);
+    if (T.length && T[0].w === sizes[0][0] && T[0].h === sizes[0][1]) return;
+    T.forEach(t => { G.deleteTexture(t.tex); G.deleteFramebuffer(t.fb); });
+    T = sizes.map(([w, h]) => { const tex = newTex(); G.texImage2D(G.TEXTURE_2D, 0, G.RGBA, w, h, 0, G.RGBA, G.UNSIGNED_BYTE, null);
+      const fb = G.createFramebuffer(); G.bindFramebuffer(G.FRAMEBUFFER, fb); G.framebufferTexture2D(G.FRAMEBUFFER, G.COLOR_ATTACHMENT0, G.TEXTURE_2D, tex, 0); return { tex, fb, w, h }; });
+    G.bindFramebuffer(G.FRAMEBUFFER, null);
+  }
+  function down(srcTex, sw, sh, dst, factor){
+    G.bindFramebuffer(G.FRAMEBUFFER, dst.fb); G.viewport(0, 0, dst.w, dst.h);
+    G.activeTexture(G.TEXTURE0); G.bindTexture(G.TEXTURE_2D, srcTex); G.uniform1i(GD.t, 0);
+    G.uniform2f(GD.px, factor / 4 / sw, factor / 4 / sh);
+    G.drawArrays(G.TRIANGLE_STRIP, 0, 4);
+  }
+  function tex(unit, t){ G.activeTexture(G.TEXTURE0 + unit); G.bindTexture(G.TEXTURE_2D, t); }
+  function put(t, src){ G.activeTexture(G.TEXTURE0); G.bindTexture(G.TEXTURE_2D, t); G.texImage2D(G.TEXTURE_2D, 0, G.RGBA, G.RGBA, G.UNSIGNED_BYTE, src); }
+
+  function renderGL(){
+    const vw = cam.videoWidth, vh = cam.videoHeight; if (!vw || !vh || !initG()) return;
     const [sx, sy, sw, sh] = crop(vw, vh);
-    const k = Math.min(1, 1920 / Math.max(sw, sh));
+    const k = Math.min(1, 1920 * outScale / Math.max(sw, sh));
     const W = Math.round(sw * k / 2) * 2, H = Math.round(sh * k / 2) * 2;
-    if (fxC.width !== W || fxC.height !== H){ fxC.width = work.width = per.width = W; fxC.height = work.height = per.height = H; vigCache = null; }
-    const L = look();
-    wX.globalCompositeOperation = 'source-over'; wX.globalAlpha = 1;
-    const useMask = mask && needSeg();
-    if (useMask && S.blur !== 'off') blurInto(img, sx, sy, sw, sh, W, H, S.blur === 'strong' ? 5 : 4);
-    else wX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
-    if (useMask){
-      const m = mask;
-      pX.globalCompositeOperation = 'source-over'; pX.globalAlpha = 1;
-      pX.clearRect(0, 0, W, H);
-      pX.imageSmoothingEnabled = true; pX.imageSmoothingQuality = 'high';
-      pX.drawImage(m, 0, 0, W, H);
-      pX.globalCompositeOperation = 'source-in';
-      pX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
-      pX.globalCompositeOperation = 'source-over';
-      wX.drawImage(per, 0, 0);
-    }
+    if (fxC.width !== W || fxC.height !== H){ fxC.width = W; fxC.height = H; maskDirty = true; }
     lastCrop = [sx, sy, sw, sh, W, H];
-    const src = (beautyOn() && beauty(W, H)) ? glc : work;
-    // colour and light
-    const b = 1 + S.bright / 100;
-    fxX.globalCompositeOperation = 'source-over'; fxX.globalAlpha = 1;
-    if (filterOK){
-      fxX.filter = `brightness(${b}) contrast(${L.contrast}) saturate(${L.sat})`;
-      fxX.drawImage(src, 0, 0); fxX.filter = 'none';
+    put(Gt.vid, cam);
+    targets(vw, vh);
+    G.useProgram(Gdown);
+    down(Gt.vid, vw, vh, T[0], 4); down(T[0].tex, T[0].w, T[0].h, T[1], 2); down(T[1].tex, T[1].w, T[1].h, T[2], 2); down(T[2].tex, T[2].w, T[2].h, T[3], 2);
+    const seg = needSeg() && maskReady;
+    if (seg && segDirty){ put(Gt.seg, mcan); segDirty = false; }
+    const has = beautyOn() && face && faceMiss < 3 && face.W === W;
+    if (beautyOn() && (maskDirty || !has)){ drawMask(W, H); maskDirty = false; put(Gt.mask, bm); put(Gt.mask2, bm2); }
+
+    G.bindFramebuffer(G.FRAMEBUFFER, null); G.viewport(0, 0, W, H); G.useProgram(Gmain);
+    tex(0, Gt.vid); tex(1, T[1].tex); tex(2, T[2].tex); tex(3, T[3].tex); tex(4, Gt.seg); tex(5, Gt.mask); tex(6, Gt.mask2);
+    ['uVid','uB','uC','uD','uSeg','uMask','uMask2'].forEach((n, i) => G.uniform1i(GU[n], i));
+    G.uniform2f(GU.uRes, W, H); G.uniform2f(GU.uCT, 1 / T[2].w, 1 / T[2].h); G.uniform2f(GU.uDT, 1 / T[3].w, 1 / T[3].h);
+    G.uniform4f(GU.uCrop, sx / vw, sy / vh, sw / vw, sh / vh);
+    G.uniform1f(GU.uBlur, S.blur === 'strong' ? 2 : S.blur === 'soft' ? 1 : 0); G.uniform1f(GU.uHasSeg, seg ? 1 : 0);
+    // beauty
+    G.uniform1f(GU.uSmooth, S.smooth / 100); G.uniform1f(GU.uTone, S.tone / 100); G.uniform1f(GU.uLips, S.lips / 100);
+    G.uniform1f(GU.uDefine, Math.max(S.tone, S.eyes) / 100); G.uniform1f(GU.uHasFace, has ? 1 : 0);
+    const J = new Float32Array(32);
+    if (has){
+      const ew = (dist(P(33), P(133)) + dist(P(263), P(362))) / 2, ek = S.eyes / 100 * 0.36;
+      const er = avg(33, 133, 159, 145), el = avg(263, 362, 386, 374);
+      G.uniform4f(GU.uEyeR, er[0], er[1], ew * 1.35, ek); G.uniform4f(GU.uEyeL, el[0], el[1], ew * 1.35, ek);
+      const mc = avg(13, 14, 61, 291); G.uniform4f(GU.uMouth, mc[0], mc[1], dist(P(61), P(291)) * 0.8, S.lips / 100 * 0.17);
+      const nc = avg(129, 358, 4); G.uniform4f(GU.uNose, nc[0], nc[1], dist(P(129), P(358)), S.slim / 100 * 0.3);
+      const fw = dist(P(234), P(454)), sk = S.slim / 100;
+      G.uniform1f(GU.uMidX, avg(1, 152, 10)[0]);
+      [[172, .07, .34], [136, .07, .28], [150, 0, .2], [397, .07, .34], [365, .07, .28], [379, 0, .2], [132, .03, .3], [361, .03, .3]]
+        .forEach(([id, amt, rad], i) => { const [x, y] = P(id); J.set([x, y, fw * rad, amt * sk / rad], i * 4); });
     } else {
-      fxX.drawImage(src, 0, 0);
-      if (b !== 1){ fxX.globalCompositeOperation = b > 1 ? 'screen' : 'multiply';
-        const v = b > 1 ? 255 : Math.round(255 * b); fxX.fillStyle = b > 1 ? `rgba(255,255,255,${(b - 1) * 0.9})` : `rgb(${v},${v},${v})`; fxX.fillRect(0, 0, W, H); }
-      if (L.contrast > 1){ fxX.globalCompositeOperation = 'soft-light'; fxX.globalAlpha = Math.min(.5, (L.contrast - 1) * 2.5); fxX.drawImage(work, 0, 0); fxX.globalAlpha = 1; }
-      if (L.mono){ fxX.globalCompositeOperation = 'saturation'; fxX.fillStyle = '#808080'; fxX.fillRect(0, 0, W, H); }
+      [GU.uEyeL, GU.uEyeR, GU.uMouth, GU.uNose].forEach(u => G.uniform4f(u, 0, 0, 1, 0));
+      for (let i = 0; i < 8; i++) J.set([0, 0, 1, 0], i * 4);
     }
-    if (S.warm){
-      fxX.globalCompositeOperation = 'soft-light';
-      fxX.fillStyle = S.warm > 0 ? `rgba(255,150,60,${S.warm / 60})` : `rgba(60,140,255,${-S.warm / 60})`;
-      fxX.fillRect(0, 0, W, H);
-    }
-    fxX.globalCompositeOperation = 'source-over';
-    if (L.vig){
-      if (!vigCache || vigCache.v !== L.vig){
-        const g = fxX.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.hypot(W, H) / 2);
-        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${L.vig})`);
-        vigCache = { v: L.vig, g };
-      }
-      fxX.fillStyle = vigCache.g; fxX.fillRect(0, 0, W, H);
-    }
-    applyFilter(W, H);
-    fxX.globalCompositeOperation = 'source-over'; fxX.globalAlpha = 1;
+    G.uniform4fv(GU.uJ, J);
+    // light and colour
+    const Lk = look();
+    G.uniform1f(GU.uBright, 1 + S.bright / 100); G.uniform1f(GU.uContrast, Lk.contrast); G.uniform1f(GU.uSat, Lk.sat);
+    G.uniform1f(GU.uWarm, Math.max(-.5, Math.min(.5, S.warm / 60))); G.uniform1f(GU.uVig, Lk.vig || 0);
+    // filter
+    const F = FILTERS[S.filter] || {}, fk = S.filter === 'none' ? 0 : S.fstr / 100;
+    G.uniform1f(GU.uBloom, (F.bloom || 0) * fk); G.uniform1f(GU.uLift, (F.lift || 0) * fk);
+    G.uniform1f(GU.uFade, (F.fade || 0) * fk); G.uniform1f(GU.uGrain, (F.grain || 0) * fk * .35);
+    G.uniform1f(GU.uSparkle, F.sparkle ? fk : 0); G.uniform1f(GU.uTime, (performance.now() / 1000) % 1000);
+    if (F.tint){ const [r, g, b] = F.tint.split(',').map(n => +n / 255); G.uniform4f(GU.uTint, r, g, b, Math.min(1, F.tintA * fk * 1.6)); }
+    else G.uniform4f(GU.uTint, 0, 0, 0, 0);
+    G.drawArrays(G.TRIANGLE_STRIP, 0, 4);
   }
 
   function fxTick(){
     if (!fxRunning) return;
     if (cam.readyState >= 2){
       const want = needSeg();
-      renderFx(cam, want ? maskReady : null);
+      renderGL();
       const now = performance.now();
+      if (lastTick){ const f = 1000 / Math.max(1, now - lastTick); fpsAvg = fpsAvg * 0.9 + f * 0.1;
+        if (fpsAvg < 22 && !recording){ if (!slowSince) slowSince = now; else if (now - slowSince > 2000 && outScale > 0.6){ outScale = outScale > 0.8 ? 0.67 : 0.5; slowSince = 0; } } else slowSince = 0; }
+      lastTick = now;
+      if (now - infoAt > 1000){ infoAt = now; $('#info').textContent = `${outScale < 1 ? Math.round(1920 * outScale) + 'p' : infoBase} · ${Math.round(fpsAvg)}fps live`; }
+      const both = want && beautyOn();
       if (want && segm && !segBusy && now >= nextSegAt){
         // find the person on a small copy, a few times a second, so drawing stays at full speed
         segBusy = true;
         const vw = cam.videoWidth, vh = cam.videoHeight, iw = 256, ih = Math.max(2, Math.round(256 * vh / vw));
         if (segIn.width !== iw || segIn.height !== ih){ segIn.width = iw; segIn.height = ih; }
         segInX.drawImage(cam, 0, 0, iw, ih);
-        const done = () => { segBusy = false; const t = performance.now(); segDur = t - now; nextSegAt = t + Math.max(80, segDur * 1.5); };
+        const done = () => { segBusy = false; const t = performance.now(); segDur = t - now; nextSegAt = t + Math.max(both ? 160 : 90, segDur * (both ? 2.5 : 1.6)); };
         segm.send({ image: segIn }).then(done, done);
       } else if (beautyOn() && faceM && !faceBusy && !segBusy && now >= nextFaceAt){
         faceBusy = true;
-        const vw = cam.videoWidth, vh = cam.videoHeight, iw = 480, ih = Math.max(2, Math.round(480 * vh / vw));
+        const vw = cam.videoWidth, vh = cam.videoHeight, iw = 360, ih = Math.max(2, Math.round(360 * vh / vw));
         if (faceIn.width !== iw || faceIn.height !== ih){ faceIn.width = iw; faceIn.height = ih; }
         faceInX.drawImage(cam, 0, 0, iw, ih);
-        const done = () => { faceBusy = false; const t = performance.now(); nextFaceAt = t + Math.max(60, (t - now) * 1.4); };
+        const done = () => { faceBusy = false; const t = performance.now(); nextFaceAt = t + Math.max(both ? 110 : 80, (t - now) * 1.6); };
         faceM.send({ image: faceIn }).then(done, done);
       }
     }
@@ -760,8 +842,6 @@
   let face = null, faceMiss = 99, maskDirty = false;
   const [faceIn, faceInX] = mk();
   const [bm, bmX] = mk();   // beauty mask: R = face, G = lips, B = eyes/brows/mouth (keep sharp)
-  const glc = document.createElement('canvas');
-  let gl = null, glProg = null, glTex = null, U = {}, glFailed = false;
 
   const OVAL = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
   const LIPS_OUT = [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
@@ -832,111 +912,6 @@
     bm2X.globalCompositeOperation = 'source-over';
   }
 
-  // Blurred copies of the picture at two sizes, used to airbrush the skin cheaply
-  const [bMid, bMidX] = mk(), [bLow, bLowX] = mk(), [bTmp, bTmpX] = mk();
-  function pyramid(W, H){
-    const set = (c, w, h) => { w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h)); if (c.width !== w || c.height !== h){ c.width = w; c.height = h; } };
-    set(bTmp, W / 3, H / 3); set(bMid, W / 6, H / 6); set(bLow, W / 14, H / 14);
-    [bTmpX, bMidX, bLowX].forEach(x => { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; });
-    bTmpX.drawImage(work, 0, 0, bTmp.width, bTmp.height);
-    bMidX.drawImage(bTmp, 0, 0, bMid.width, bMid.height);
-    bTmpX.drawImage(bMid, 0, 0, bTmp.width / 2, bTmp.height / 2);
-    bLowX.drawImage(bTmp, 0, 0, bTmp.width / 2, bTmp.height / 2, 0, 0, bLow.width, bLow.height);
-  }
-
-  const VS = 'attribute vec2 a;varying vec2 v;void main(){v=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}';
-  const FS = `precision highp float;varying vec2 v;
-uniform sampler2D uImg,uMid,uLow,uMask,uMask2;uniform vec2 uRes;
-uniform float uSmooth,uTone,uLips,uDefine,uHasFace,uMidX;
-uniform vec4 uEyeL,uEyeR,uMouth,uNose;uniform vec4 uJ[8];
-vec2 mag(vec2 p,vec4 E){vec2 d=p-E.xy;float t=length(d)/E.z;if(t<1.){p=E.xy+d*(1.-E.w*(1.-t*t)*(1.-t*t));}return p;}
-vec2 pull(vec2 p,vec4 J){float t=length(p-J.xy)/J.z;if(t<1.){float w=1.-t*t;w*=w;p.x+=sign(J.x-uMidX)*J.w*J.z*w;}return p;}
-vec2 pinch(vec2 p,vec4 N){float t=length(p-N.xy)/N.z;if(t<1.){p.x=N.x+(p.x-N.x)*(1.+N.w*(1.-t*t));}return p;}
-vec3 softl(vec3 b,vec3 s){return mix(2.*b*s+b*b*(1.-2.*s),sqrt(b)*(2.*s-1.)+2.*b*(1.-s),step(.5,s));}
-float L(vec3 c){return dot(c,vec3(.299,.587,.114));}
-void main(){
- vec2 p=v*uRes;
- if(uHasFace>.5){
-  p=mag(p,uEyeL);p=mag(p,uEyeR);p=mag(p,uMouth);p=pinch(p,uNose);
-  for(int i=0;i<8;i++){p=pull(p,uJ[i]);}
- }
- vec2 q=p/uRes;
- vec3 c=texture2D(uImg,q).rgb, mid=texture2D(uMid,q).rgb, low=texture2D(uLow,q).rgb;
- vec4 m=texture2D(uMask,v), m2=texture2D(uMask2,v);
- float keep=clamp(m.b,0.,1.), lip=m.g*(1.-keep);
- float skin=uHasFace>.5 ? m.r*(1.-keep)*(1.-lip) : 0.;
- // airbrush: take away fine texture and blotches, keep real edges
- vec3 det=c-mid; float edge=smoothstep(.07,.16,length(det));
- vec3 sm=mid+det*mix(1.-uSmooth*.92,1.,edge);
- vec3 ev=sm+(low-mid)*uTone*.6;                        // even out patches and dark marks
- ev*=1.+uTone*.07;                                     // gentle lift so cheeks stay evenly lit
- float lo=L(ev), lm=L(low); ev=mix(ev,mix(ev,low*1.06,.7),smoothstep(lm+.06,lm+.25,lo)*uTone*.85); // flatten shine patches, keep a soft glow
- float le=L(ev); ev=mix(vec3(le),ev,1.-uTone*.1);       // slightly less red, more natural
- ev*=1.+m2.r*uTone*.28;                                // brighten under the eyes
- c=mix(c,ev,clamp(skin,0.,1.));
- // define brows and lashes
- c*=1.-uDefine*(m2.g*.22+m2.b*.3)*(1.-skin*.5);
- // lips: nude pink with a little gloss
- if(uLips>0.){vec3 sl=softl(c,vec3(.9,.5,.55));float g=smoothstep(.35,.6,L(c));sl+=g*.06;c=mix(c,sl,clamp(uLips*lip,0.,1.));}
- gl_FragColor=vec4(c,1.);
-}`;
-  function initGL(){
-    if (gl || glFailed) return !!gl;
-    try {
-      gl = glc.getContext('webgl', { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false });
-      if (!gl) throw 0;
-      const sh = (t, src) => { const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
-      glProg = gl.createProgram(); gl.attachShader(glProg, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(glProg, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(glProg);
-      if (!gl.getProgramParameter(glProg, gl.LINK_STATUS)) throw new Error('link');
-      gl.useProgram(glProg);
-      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
-      const a = gl.getAttribLocation(glProg, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-      const tex = () => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-        [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); return t; };
-      glTex = [tex(), tex(), tex(), tex(), tex()];
-      ['uImg','uMid','uLow','uMask','uMask2','uRes','uSmooth','uTone','uLips','uDefine','uHasFace','uMidX','uEyeL','uEyeR','uMouth','uNose','uJ'].forEach(n => U[n] = gl.getUniformLocation(glProg, n));
-      ['uImg','uMid','uLow','uMask','uMask2'].forEach((n, i) => gl.uniform1i(U[n], i));
-      return true;
-    } catch (e) { glFailed = true; gl = null; console.warn('beauty off', e); return false; }
-  }
-  function upload(i, src){ gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, glTex[i]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); }
-
-  function beauty(W, H){
-    if (!initGL()) return false;
-    if (glc.width !== W || glc.height !== H){ glc.width = W; glc.height = H; maskDirty = true; }
-    gl.viewport(0, 0, W, H);
-    pyramid(W, H);
-    upload(0, work); upload(1, bMid); upload(2, bLow);
-    const has = face && faceMiss < 3 && face.W === W;
-    if (maskDirty || !has){ drawMask(W, H); maskDirty = false; upload(3, bm); upload(4, bm2); }
-    gl.uniform2f(U.uRes, W, H);
-    gl.uniform1f(U.uSmooth, S.smooth / 100); gl.uniform1f(U.uTone, S.tone / 100);
-    gl.uniform1f(U.uLips, S.lips / 100); gl.uniform1f(U.uDefine, Math.max(S.tone, S.eyes) / 100);
-    gl.uniform1f(U.uHasFace, has ? 1 : 0);
-    const J = new Float32Array(32);
-    if (has){
-      const ew = (dist(P(33), P(133)) + dist(P(263), P(362))) / 2, ek = S.eyes / 100 * 0.36;
-      const er = avg(33, 133, 159, 145), el = avg(263, 362, 386, 374);
-      gl.uniform4f(U.uEyeR, er[0], er[1], ew * 1.35, ek); gl.uniform4f(U.uEyeL, el[0], el[1], ew * 1.35, ek);
-      const mc = avg(13, 14, 61, 291), mwid = dist(P(61), P(291));
-      gl.uniform4f(U.uMouth, mc[0], mc[1], mwid * 0.8, S.lips / 100 * 0.17);
-      const nc = avg(129, 358, 4);
-      gl.uniform4f(U.uNose, nc[0], nc[1], dist(P(129), P(358)) * 1.0, S.slim / 100 * 0.3);
-      const fw = dist(P(234), P(454)), mid = avg(1, 152, 10)[0], sk = S.slim / 100;
-      gl.uniform1f(U.uMidX, mid);
-      // jawline and cheeks pulled toward the middle: strongest at the lower jaw, for a V shape
-      [[172, .07, .34], [136, .07, .28], [150, 0, .2], [397, .07, .34], [365, .07, .28], [379, 0, .2], [132, .03, .3], [361, .03, .3]]
-        .forEach(([id, amt, rad], i) => { const [x, y] = P(id); J.set([x, y, fw * rad, amt * sk / rad], i * 4); });
-    } else {
-      [U.uEyeL, U.uEyeR, U.uMouth, U.uNose].forEach(u => gl.uniform4f(u, 0, 0, 1, 0));
-      for (let i = 0; i < 8; i++) J.set([0, 0, 1, 0], i * 4);
-    }
-    gl.uniform4fv(U.uJ, J);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    return true;
-  }
-
   function loadSeg(){
     if (segLoading) return segLoading;
     toast('Loading background blur…', 0);
@@ -945,7 +920,7 @@ void main(){
         await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'vendor/selfie/selfie_segmentation.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
         const m = new SelfieSegmentation({ locateFile: f => 'vendor/selfie/' + f });
         m.setOptions({ modelSelection: 0, selfieMode: false });
-        m.onResults(r => { try { if (r.segmentationMask){ const vw = cam.videoWidth, vh = cam.videoHeight; const [sx, sy, sw, sh] = crop(vw, vh); refineMask(r.segmentationMask, sx, sy, sw, sh, vw, vh); maskReady = mup; } } catch {} });
+        m.onResults(r => { try { if (r.segmentationMask){ const vw = cam.videoWidth, vh = cam.videoHeight; const [sx, sy, sw, sh] = crop(vw, vh); refineMask(r.segmentationMask, sx, sy, sw, sh, vw, vh); maskReady = true; } } catch {} });
         await m.initialize();
         segm = m; $('#toast').classList.add('hidden');
       } catch (e) {
@@ -960,7 +935,8 @@ void main(){
     $('#lookName').textContent = look().name + (isCustom() ? ' (edited)' : '') + (S.filter !== 'none' ? ' · ' + FILTERS[S.filter].name : '');
     $('#grid').classList.toggle('hidden', !S.grid);
     $('#ring').classList.toggle('hidden', !S.ring);
-    const on = needFx();
+    let on = needFx();
+    if (on && !initG()){ on = false; toast('Looks and filters aren’t supported in this browser. Try Safari on an up-to-date iPhone.'); }
     fxC.classList.toggle('hidden', !on);
     fxC.classList.toggle('mirror', cam.classList.contains('mirror'));
     fxC.classList.toggle('contain', S.ratio !== 'full');
@@ -986,58 +962,6 @@ void main(){
     sparkle: { name: 'Sparkle',    bloom: .35, lift: .05, sparkle: true },
   };
   const FKEYS = Object.keys(FILTERS);
-  const [b1, b1X] = mk(), [b2, b2X] = mk(), [spk, spkX] = mk();
-  let noisePat = null;
-  const sparks = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: .008 + Math.random() * .02, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6, dy: .0004 + Math.random() * .0008, gold: Math.random() < .4 }));
-  function star(x, cx, cy, r){
-    x.beginPath();
-    x.moveTo(cx, cy - r); x.quadraticCurveTo(cx, cy, cx + r, cy); x.quadraticCurveTo(cx, cy, cx, cy + r);
-    x.quadraticCurveTo(cx, cy, cx - r, cy); x.quadraticCurveTo(cx, cy, cx, cy - r); x.fill();
-  }
-  function applyFilter(W, H){
-    const F = FILTERS[S.filter]; if (!F || S.filter === 'none') return;
-    const k = S.fstr / 100; if (k <= 0) return;
-    fxX.globalAlpha = 1;
-    if (F.bloom){
-      const w4 = Math.max(2, Math.round(W / 4)), h4 = Math.max(2, Math.round(H / 4)), w16 = Math.max(2, Math.round(W / 16)), h16 = Math.max(2, Math.round(H / 16));
-      if (b1.width !== w4 || b1.height !== h4){ b1.width = w4; b1.height = h4; }
-      if (b2.width !== w16 || b2.height !== h16){ b2.width = w16; b2.height = h16; }
-      b1X.imageSmoothingQuality = b2X.imageSmoothingQuality = 'high';
-      b1X.drawImage(fxC, 0, 0, w4, h4); b2X.drawImage(b1, 0, 0, w16, h16); b1X.drawImage(b2, 0, 0, w4, h4);
-      fxX.globalCompositeOperation = 'screen'; fxX.globalAlpha = F.bloom * k;
-      fxX.drawImage(b1, 0, 0, W, H); fxX.globalAlpha = 1;
-    }
-    if (F.lift){ fxX.globalCompositeOperation = 'screen'; fxX.fillStyle = `rgba(255,255,255,${F.lift * k})`; fxX.fillRect(0, 0, W, H); }
-    if (F.tint){ fxX.globalCompositeOperation = 'soft-light'; fxX.fillStyle = `rgba(${F.tint},${F.tintA * k * 1.6})`; fxX.fillRect(0, 0, W, H); }
-    if (F.fade){ const v = Math.round(255 * F.fade * k); fxX.globalCompositeOperation = 'lighten'; fxX.fillStyle = `rgb(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8})`; fxX.fillRect(0, 0, W, H); }
-    if (F.grain){
-      if (!noisePat){
-        const [n, nX] = mk(); n.width = n.height = 160; const id = nX.createImageData(160, 160);
-        for (let i = 0; i < id.data.length; i += 4){ const v = 128 + (Math.random() - .5) * 200; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
-        nX.putImageData(id, 0, 0); noisePat = fxX.createPattern(n, 'repeat');
-      }
-      fxX.save(); fxX.globalCompositeOperation = 'overlay'; fxX.globalAlpha = F.grain * k;
-      fxX.translate(Math.random() * 160, Math.random() * 160); fxX.fillStyle = noisePat; fxX.fillRect(-160, -160, W + 320, H + 320); fxX.restore();
-    }
-    if (F.sparkle){
-      if (spk.width !== W || spk.height !== H){ spk.width = W; spk.height = H; }
-      spkX.globalCompositeOperation = 'source-over'; spkX.clearRect(0, 0, W, H);
-      const t = performance.now() / 1000, m = Math.min(W, H);
-      for (const p of sparks){
-        p.y -= p.dy; if (p.y < -.05){ p.y = 1.05; p.x = Math.random(); }
-        const a = Math.max(0, Math.sin(t * p.sp + p.ph)) * k;
-        if (a < .05) continue;
-        const cx = p.x * W, cy = p.y * H, r = p.r * m * (.6 + .4 * a);
-        spkX.globalAlpha = a * .55; spkX.fillStyle = p.gold ? '#ffd9a0' : '#ffffff';
-        spkX.beginPath(); spkX.arc(cx, cy, r * .9, 0, 6.29); spkX.fill();
-        spkX.globalAlpha = a; star(spkX, cx, cy, r * 1.8);
-      }
-      spkX.globalAlpha = 1;
-      if (maskReady && needSeg()){ spkX.globalCompositeOperation = 'destination-out'; spkX.drawImage(maskReady, 0, 0, W, H); spkX.globalCompositeOperation = 'source-over'; }
-      fxX.globalCompositeOperation = 'screen'; fxX.drawImage(spk, 0, 0);
-    }
-    fxX.globalCompositeOperation = 'source-over'; fxX.globalAlpha = 1;
-  }
   function setFilter(key, announce){
     S.filter = key; save(); paintPanel(); updateFx();
     if (announce){ const f = $('#fname'); f.textContent = FILTERS[key].name; f.classList.add('show'); clearTimeout(setFilter._t); setFilter._t = setTimeout(() => f.classList.remove('show'), 900); }

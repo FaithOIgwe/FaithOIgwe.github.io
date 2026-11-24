@@ -194,10 +194,6 @@
       <div><label>Start scrolling with recording</label><small>Off = you tap the text to start it</small></div>
       <button class="switch" id="autoScroll" aria-label="Auto scroll"></button>
     </div>
-    <div class="row">
-      <div><label>Mirror text</label><small>Only for teleprompter glass rigs</small></div>
-      <button class="switch" id="mirror" aria-label="Mirror text"></button>
-    </div>
   </div>
 
   <button class="primary" id="go">Open camera</button>
@@ -294,7 +290,7 @@
     speed: store.get('speed', 3),
     countdown: store.get('countdown', 3),
     autoScroll: store.get('autoScroll', true),
-    mirror: store.get('mirror', false),
+    mirror: false,
     quality: store.get('quality', '1080'),
     fps: store.get('fps', 30),
     look: store.get('look', 'studio'),
@@ -338,7 +334,6 @@
     paint();
   };
   sw('#autoScroll', 'autoScroll');
-  sw('#mirror', 'mirror');
 
   $('#size').value = S.size;  $('#speed').value = S.speed;
   $('#size').addEventListener('input', e => { S.size = +e.target.value; save(); applyStyle(); });
@@ -412,6 +407,7 @@
     $('#info').textContent = short ? `${short >= 2160 ? '4K' : short >= 1080 ? '1080p' : short + 'p'} · ${Math.round(set.frameRate || S.fps)}fps` : '';
     setupExtras(track);
     buildLenses(set.deviceId);
+    maskReady = null;
     updateFx();
     setupMeter();
   }
@@ -594,8 +590,8 @@
   };
   const fxC = $('#fx'), fxX = fxC.getContext('2d');
   const mk = () => { const c = document.createElement('canvas'); return [c, c.getContext('2d')]; };
-  const [work, wX] = mk(), [per, pX] = mk(), [s1, s1X] = mk(), [s2, s2X] = mk();
-  let segm = null, segLoading = null, segBusy = false, fxRunning = false, vigCache = null;
+  const [segIn, segInX] = mk(), [work, wX] = mk(), [per, pX] = mk(), [s1, s1X] = mk(), [s2, s2X] = mk();
+  let segDur = 40, nextSegAt = 0, maskReady = null, segm = null, segLoading = null, segBusy = false, fxRunning = false, vigCache = null;
   const filterOK = (() => { try {
     const [c, x] = mk(); c.width = c.height = 2; if (!('filter' in x)) return false;
     x.filter = 'invert(1)'; x.fillStyle = '#000'; x.fillRect(0, 0, 2, 2);
@@ -647,7 +643,7 @@
     const first = !prevA; if (first) prevA = new Float32Array(n);
     for (let i = 0, j = 3; i < n; i++, j += 4){
       let a = (d[j] / 255 - 0.22) / 0.4; a = a < 0 ? 0 : a > 1 ? 1 : a; a = a * a * (3 - 2 * a);
-      const v = first ? a : prevA[i] * 0.4 + a * 0.6; prevA[i] = v;
+      const v = first ? a : prevA[i] * 0.3 + a * 0.7; prevA[i] = v;
       d[j - 3] = d[j - 2] = d[j - 1] = 255; d[j] = (v * 255) | 0;
     }
     mX.putImageData(id, 0, 0);
@@ -670,7 +666,7 @@
     if (useMask && S.blur !== 'off') blurInto(img, sx, sy, sw, sh, W, H, S.blur === 'strong' ? 5 : 4);
     else wX.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
     if (useMask){
-      const m = refineMask(mask, sx, sy, sw, sh, vw, vh, W, H);
+      const m = mask;
       pX.globalCompositeOperation = 'source-over'; pX.globalAlpha = 1;
       pX.clearRect(0, 0, W, H);
       pX.imageSmoothingEnabled = true; pX.imageSmoothingQuality = 'high';
@@ -719,9 +715,18 @@
   function fxTick(){
     if (!fxRunning) return;
     if (cam.readyState >= 2){
-      if (needSeg() && segm){
-        if (!segBusy){ segBusy = true; segm.send({ image: cam }).then(() => { segBusy = false; }, () => { segBusy = false; }); }
-      } else renderFx(cam, null);
+      const want = needSeg();
+      renderFx(cam, want ? maskReady : null);
+      const now = performance.now();
+      if (want && segm && !segBusy && now >= nextSegAt){
+        // find the person on a small copy, a few times a second, so drawing stays at full speed
+        segBusy = true;
+        const vw = cam.videoWidth, vh = cam.videoHeight, iw = 256, ih = Math.max(2, Math.round(256 * vh / vw));
+        if (segIn.width !== iw || segIn.height !== ih){ segIn.width = iw; segIn.height = ih; }
+        segInX.drawImage(cam, 0, 0, iw, ih);
+        const done = () => { segBusy = false; const t = performance.now(); segDur = t - now; nextSegAt = t + Math.max(80, segDur * 1.5); };
+        segm.send({ image: segIn }).then(done, done);
+      }
     }
     if (cam.requestVideoFrameCallback) cam.requestVideoFrameCallback(fxTick); else requestAnimationFrame(fxTick);
   }
@@ -734,7 +739,7 @@
         await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'vendor/selfie/selfie_segmentation.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
         const m = new SelfieSegmentation({ locateFile: f => 'vendor/selfie/' + f });
         m.setOptions({ modelSelection: 0, selfieMode: false });
-        m.onResults(r => { try { r.segmentationMask && r.image ? renderFx(r.image, r.segmentationMask) : renderFx(cam, null); } catch { renderFx(cam, null); } });
+        m.onResults(r => { try { if (r.segmentationMask){ const vw = cam.videoWidth, vh = cam.videoHeight; const [sx, sy, sw, sh] = crop(vw, vh); refineMask(r.segmentationMask, sx, sy, sw, sh, vw, vh); maskReady = mup; } } catch {} });
         await m.initialize();
         segm = m; $('#toast').classList.add('hidden');
       } catch (e) {
@@ -773,7 +778,7 @@
     $('#lookList').appendChild(b);
   });
   $('#blurSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.blur = b.dataset.v; save(); paintPanel(); updateFx(); });
-  $('#ratioSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ratio = b.dataset.v; save(); paintPanel(); updateFx(); });
+  $('#ratioSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ratio = b.dataset.v; maskReady = null; save(); paintPanel(); updateFx(); });
   ['bright', 'warm', 'smooth'].forEach(k => $('#' + k).addEventListener('input', e => { S[k] = +e.target.value; save(); updateFx(); }));
   $('#gridSw').addEventListener('click', () => { S.grid = !S.grid; save(); paintPanel(); updateFx(); });
   $('#ringSw').addEventListener('click', () => { S.ring = !S.ring; save(); paintPanel(); updateFx(); });

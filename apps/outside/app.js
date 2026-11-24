@@ -131,6 +131,7 @@ function vLanding(){
    <div>${ICON.shield}<p style="margin:0"><b>Everyone's verified</b><span>Every member is checked on a quick video call. You always meet at a public place.</span></p></div>
    <div>${ICON.loop}<p style="margin:0"><b>Keep the good ones</b><span>Clicked with someone? Make it a circle and go again.</span></p></div></div>
   ${hs?`<p class="tiny" style="text-align:center">${hs} things happening in ${e(S.city)} this month</p>`:''}
+  <a class="btn soft block" href="?demo">Just looking? Try the demo</a>
   <p class="tiny" style="text-align:center">18+ only · <a href="privacy.html">Privacy & rules</a></p>`;
 }
 function vRecovery(){return`<h1 class="title">New password</h1><form id="newPw" class="form card"><label class="fld">Password<input type="password" name="pw" required minlength="8" autocomplete="new-password"></label><button class="btn block">Save</button></form>`}

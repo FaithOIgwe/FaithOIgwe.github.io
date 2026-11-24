@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outside: find people who are down</title>
+<meta name="description" content="Want to go somewhere and your friends can't make it? Outside finds you people who are down. Small groups, public places, verified members. Lagos and Abuja.">
+<meta name="theme-color" content="#ffb400">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Outside">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:title" content="Outside: find people who are down">
+<meta property="og:description" content="Small groups, public places, verified members. Lagos and Abuja.">
+<meta property="og:image" content="https://faithoigwe.github.io/apps/outside/icons/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm, social, a little bold; a friend saying "we outside"
+   IDEA: an admission ticket with a tear-off stub, one per plan
+   PICTURE: the plan tickets themselves, big hanging dates
+   COLOUR and TYPE: marigold band, ink, hibiscus accent; Familjen Grotesk + Inter
+   LAYOUT: band header with city switch and tabs, one calm column, host tools in wide rows */
+:root{color-scheme:light dark;
+--bg:light-dark(#fffdf8,#15121b);--ink:light-dark(#1a1423,#f5f0e8);--mute:light-dark(#6a6174,#a99fb4);
+--sun:light-dark(#ffb400,#f0a800);--hib:light-dark(#c8124f,#ff6b98);--card:light-dark(#ffffff,#201b29);
+--line:light-dark(#ebe4d8,#3a3145);--soft:light-dark(#fff4d6,#2b2414);--okbg:light-dark(#eaf6ee,#16261c);--ok:light-dark(#1d6b3a,#7fd6a0)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,4vw,48px) max(5vw,16px)}
+h1,h2,h3,h4{font-family:"Familjen Grotesk",Inter,sans-serif;line-height:1.1;margin:0;text-wrap:balance}
+.top{background:var(--sun);color:#1a1423;padding-bottom:0}
+.brand h1{font-size:clamp(40px,7vw,64px);letter-spacing:-.02em}
+.brand p{margin:.35em 0 1.1em;font-size:17px;max-width:44ch}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav a{color:#1a1423;text-decoration:none;font-weight:600;padding:12px 16px;border-radius:12px 12px 0 0;min-height:44px}
+nav a[aria-current=page]{background:var(--bg);color:var(--ink)}
+nav a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--hib);outline-offset:2px}
+main{max-width:1000px;margin:0 auto}
+.note{background:var(--soft);padding:12px max(5vw,16px);font-size:15px}
+.h{font-size:clamp(24px,3.4vw,32px);margin:8px 0 16px}.h3{font-size:20px;margin:32px 0 10px}
+.lede{max-width:62ch;color:var(--mute);margin:-6px 0 20px}
+.mute{color:var(--mute)}.small{font-size:14px}
+.tickets{display:grid;gap:18px;margin-bottom:28px}
+.ticket{display:grid;grid-template-columns:120px minmax(0,1fr);background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 1px 0 var(--line),0 10px 24px -18px rgba(26,20,35,.35)}
+.stub{background:var(--ink);color:var(--bg);padding:18px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;border-right:3px dashed var(--bg);gap:2px}
+.stub b{font:700 52px/1 "Familjen Grotesk",sans-serif}
+.stub span{font-size:14px;white-space:nowrap}
+.body{padding:18px 20px}
+.kind{margin:0 0 4px;font-size:14px;font-weight:600;color:var(--hib)}
+.body h3{font-size:24px;margin-bottom:6px}
+.meta{margin:2px 0;font-size:15px}
+.meter{height:8px;background:var(--line);border-radius:8px;margin:12px 0 6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--sun);border-radius:8px}
+.step{background:var(--soft);border-radius:12px;padding:12px 14px;margin:12px 0 4px;font-size:15px}
+.step.ok{background:var(--okbg)}.step.ok b{color:var(--ok)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.btn{font:600 16px/1 Inter,sans-serif;background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:13px 18px;min-height:44px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;color:var(--hib);font:500 15px Inter,sans-serif;text-decoration:underline;cursor:pointer;padding:10px 0;min-height:44px}
+.danger{color:var(--hib)}
+.mini{font:500 14px Inter,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;min-height:36px;cursor:pointer;white-space:nowrap}
+.mini.on{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.form{display:grid;gap:14px;max-width:560px}
+.grid2{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.span2{grid-column:1/-1}
+.fld{display:grid;gap:6px;font-size:14px;font-weight:600}
+input,select,textarea{font:16px Inter,sans-serif;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;min-height:44px;width:100%}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:15px;padding:6px 0}
+.chk input{width:20px;height:20px;min-height:0;margin-top:2px;flex:none;accent-color:var(--hib)}
+.inline{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px}.inline .fld{flex:1 1 180px}
+.fb{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;display:grid;gap:6px}
+.stars{border:0;padding:0;margin:6px 0;display:flex;gap:6px;flex-wrap:wrap}.stars legend{font-size:14px;font-weight:600;margin-bottom:6px}
+.stars label{position:relative}.stars input{position:absolute;opacity:0}
+.stars span{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);font-weight:600;cursor:pointer}
+.stars input:checked+span{background:var(--sun);border-color:var(--sun);color:#1a1423}.stars input:focus-visible+span{outline:3px solid var(--hib)}
+.wants{list-style:none;padding:0;margin:0 0 8px;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.wants li{display:grid}
+.want{display:grid;text-align:left;gap:2px;background:var(--card);color:var(--ink);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;font:600 16px Inter,sans-serif;position:relative;overflow:hidden;min-height:64px}
+.want em{font:400 14px Inter,sans-serif;color:var(--mute);font-style:normal}
+.want .bar{position:absolute;left:0;bottom:0;height:4px;background:var(--sun)}
+.want.on{border-color:var(--hib);box-shadow:inset 0 0 0 1px var(--hib)}.want.on span::after{content:" — on my list";color:var(--hib);font-weight:500;font-size:14px}
+.want:disabled{cursor:default}
+.list{padding-left:20px}.list li{margin:6px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.tile span{display:block;font-size:14px;color:var(--mute)}.tile b{font:700 clamp(26px,3vw,34px)/1.15 "Familjen Grotesk",sans-serif;white-space:nowrap}
+.tile small{display:block;font-size:13px;color:var(--mute)}
+.tile.good{border-color:var(--ok)}.tile.good b{color:var(--ok)}.tile.warn{border-color:var(--hib)}.tile.warn b{color:var(--hib)}
+.roster{margin-top:28px;border-top:3px solid var(--ink);padding-top:14px}
+.rhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.rhead h3{font-size:22px}
+.scroll{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th{text-align:left;font-size:13px;color:var(--mute);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.circles{margin-top:14px;background:var(--okbg);border-radius:14px;padding:12px 14px}
+.circles h4{font-size:16px;margin-bottom:6px;color:var(--ok)}
+.circle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:4px 0}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:18px;padding:28px;display:grid;gap:10px;justify-items:start}
+details.past summary{cursor:pointer;font-weight:600;padding:10px 0;min-height:44px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,140%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-size:15px;transition:transform .25s;max-width:92vw;z-index:9}
+#toast.on{transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){#toast{transition:none}}
+@media(max-width:600px){.ticket{grid-template-columns:84px minmax(0,1fr)}.stub b{font-size:38px}.stub span{font-size:12px;white-space:normal}.body{padding:14px}.body h3{font-size:20px}.grid2{grid-template-columns:minmax(0,1fr)}table{font-size:13px}}
+
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.cities{display:flex;background:rgba(26,20,35,.1);border-radius:999px;padding:4px;gap:4px}
+.cities button{font:600 15px Inter,sans-serif;border:0;background:none;color:#1a1423;padding:10px 16px;border-radius:999px;min-height:44px;cursor:pointer}
+.cities button[aria-pressed=true]{background:#1a1423;color:#ffb400}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px}
+.card h3{font-size:21px;margin-bottom:4px}
+.badge{display:inline-block;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--soft);white-space:nowrap}
+.badge.ok{background:var(--okbg);color:var(--ok)}.badge.hot{background:var(--hib);color:#fff}
+.people{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.person{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.person .who{display:flex;gap:10px;align-items:center}
+.av{width:40px;height:40px;border-radius:50%;background:var(--sun);color:#1a1423;display:grid;place-items:center;font:700 17px "Familjen Grotesk",sans-serif;flex:none}
+.hap{display:grid;grid-template-columns:92px minmax(0,1fr);gap:16px;align-items:start}
+.hap .date{background:var(--hib);color:#fff;border-radius:14px;padding:10px 6px;text-align:center}
+.hap .date b{display:block;font:700 34px/1 "Familjen Grotesk",sans-serif}
+.hap .date span{font-size:13px}
+.sec{margin-top:36px}
+.rules{counter-reset:r;list-style:none;padding:0;display:grid;gap:8px}
+.rules li{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:15px}
+.price{font-weight:600}
+@media(max-width:600px){.hap{grid-template-columns:70px minmax(0,1fr)}.hap .date b{font-size:26px}}
+
+
+.hero h2{font-size:clamp(44px,9vw,84px);letter-spacing:-.03em;margin:0 0 8px}
+.hero p{font-size:18px;max-width:52ch;margin:0 0 24px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+.steps{padding-left:22px;display:grid;gap:8px}.steps li{padding-left:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:600 14px Inter,sans-serif;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.feed{border-left:6px solid var(--sun)}.feed h3{font-size:18px}
+.pass{background:var(--soft);border-color:var(--sun)}
+.person.unread{border-color:var(--hib);box-shadow:inset 4px 0 0 var(--hib)}
+.suggest{border:2px solid var(--ok);background:var(--okbg)}
+.ok-text{color:var(--ok)}
+.contacts{margin:8px 0;display:flex;gap:6px;flex-wrap:wrap}
+.contacts a.mini{text-decoration:none}
+.tiles.wrap{margin-bottom:10px}
+#bell{font:600 15px Inter,sans-serif;border:0;background:rgba(26,20,35,.1);color:#1a1423;border-radius:999px;padding:10px 16px;min-height:44px;text-decoration:none;display:inline-flex;align-items:center}
+#bell.hot{background:#c8124f;color:#fff}
+.topright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:700px){.split{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header class="top band">
+  <div class="topbar">
+    <div class="brand"><h1>Outside</h1><p>For the plans you'd skip because nobody could come.</p></div>
+    <div class="topright"><a id="bell" href="#notes" hidden>Updates</a><div class="cities" role="group" aria-label="City"><button data-city="Abuja">Abuja</button><button data-city="Lagos">Lagos</button></div></div>
+  </div>
+  <nav id="nav" hidden><a href="#plans">Plans</a><a href="#down">Who's down?</a><a href="#around">Happening</a><a href="#people">My people</a><a href="#me">Me</a><a href="#host" id="hostTab" hidden>Host</a></nav>
+</header>
+<div id="note" class="note" role="status" hidden></div>
+<main id="app" class="band"><p class="mute">Loading…</p></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
